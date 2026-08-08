@@ -17,8 +17,8 @@ services:
       - key: VENDOR_DESK_PASSWORD
         sync: false
       - key: WHATSAPP_NUMBER
-        sync: false
-      - key: PUBLIC_EMAIL
-        sync: false
+        value: "918696666063"
       - key: VITE_WHATSAPP_NUMBER
-        sync: false
+        value: "918696666063"
+      - key: PUBLIC_EMAIL
+        value: rajatbissa16@gmail.com
