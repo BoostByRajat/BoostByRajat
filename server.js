@@ -118,8 +118,8 @@ async function start() {
     });
   }
 
-  app.listen(PORT, () => {
-    console.log(`BoostByRajat → http://localhost:${PORT}`);
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`BoostByRajat → http://0.0.0.0:${PORT}`);
   });
 }
 
