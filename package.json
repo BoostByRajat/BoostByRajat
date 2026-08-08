@@ -1,0 +1,18 @@
+{
+  "name": "boostbyrajat",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node server.js",
+    "build": "vite build",
+    "start": "node server.js --prod",
+    "preview": "npm run build && npm start"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "vite": "^6.2.0"
+  }
+}

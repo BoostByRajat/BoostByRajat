@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="BoostByRajat mark">
+  <rect width="128" height="128" rx="28" fill="#0B1220"/>
+  <!-- open base frame -->
+  <path d="M34 98h60c6.6 0 12-5.4 12-12V70H22v16c0 6.6 5.4 12 12 12z" fill="none" stroke="#E8A317" stroke-width="8" stroke-linejoin="round"/>
+  <path d="M22 70V54c0-6.6 5.4-12 12-12h8" fill="none" stroke="#E8A317" stroke-width="8" stroke-linecap="round"/>
+  <path d="M106 70V54c0-6.6-5.4-12-12-12h-8" fill="none" stroke="#E8A317" stroke-width="8" stroke-linecap="round"/>
+  <!-- boost arrow -->
+  <path d="M64 18L96 58H78v28H50V58H32L64 18z" fill="#E8A317"/>
+  <path d="M64 36L78 54H70v20H58V54h-8L64 36z" fill="#0B1220"/>
+  <!-- speed lines -->
+  <path d="M28 88c10-10 18-22 22-34" fill="none" stroke="#F5F0E8" stroke-width="4" stroke-linecap="round" opacity="0.9"/>
+  <path d="M100 88c-10-10-18-22-22-34" fill="none" stroke="#F5F0E8" stroke-width="4" stroke-linecap="round" opacity="0.9"/>
+</svg>

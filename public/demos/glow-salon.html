@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Glow Salon — Hair · Skin · Bridal</title>
+  <meta name="description" content="Glow Salon — premium hair, skin and bridal packages. Book on WhatsApp." />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #1a1218;
+      --panel: #241821;
+      --rose: #e891b0;
+      --rose2: #f3b6cb;
+      --cream: #fff6fa;
+      --muted: #c9b0bd;
+      --font: "Outfit", system-ui, sans-serif;
+      --display: "Cormorant Garamond", Georgia, serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: var(--font); background: var(--bg); color: var(--cream); }
+    .wrap { max-width: 1060px; margin: 0 auto; padding: 0 1.25rem; }
+    header {
+      position: sticky; top: 0; z-index: 10;
+      background: rgba(26,18,24,0.88); backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(232,145,176,0.18);
+    }
+    .nav { min-height: 70px; display:flex; align-items:center; justify-content:space-between; }
+    .logo { font-family: var(--display); font-size: 1.7rem; font-weight: 700; }
+    .nav a { color: var(--muted); text-decoration: none; margin-left: 1.1rem; font-size: 0.92rem; }
+    .btn {
+      display: inline-flex; text-decoration: none; border-radius: 999px;
+      padding: 0.85rem 1.25rem; font-weight: 700; border: 0;
+    }
+    .btn-main { background: linear-gradient(120deg, var(--rose), #ffb089); color: #2a121c; }
+    .btn-line { border: 1px solid rgba(232,145,176,0.35); color: var(--cream); }
+    .hero {
+      padding: 4.5rem 0 3rem;
+      display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 2rem; align-items: center;
+    }
+    .eyebrow { letter-spacing: 0.12em; text-transform: uppercase; color: var(--rose2); font-size: 0.72rem; font-weight: 700; margin: 0 0 0.8rem; }
+    h1 { font-family: var(--display); font-size: clamp(2.8rem, 6vw, 4.4rem); line-height: 0.95; margin: 0; }
+    .lead { color: var(--muted); max-width: 36ch; line-height: 1.6; margin: 1rem 0 0; font-size: 1.05rem; }
+    .actions { display:flex; gap:0.7rem; flex-wrap:wrap; margin-top:1.5rem; }
+    .visual {
+      min-height: 380px; border-radius: 1.6rem; padding: 1.5rem; display:grid; align-content:end;
+      background:
+        linear-gradient(180deg, transparent 10%, rgba(26,18,24,0.9)),
+        url("/demos/img/salon-hero.jpg") center/cover no-repeat;
+      border: 1px solid rgba(232,145,176,0.22);
+    }
+    .shot-row { display:grid; grid-template-columns:1fr 1fr; gap:0.85rem; margin: 0 0 1.2rem; }
+    .shot-row img { width:100%; height:200px; object-fit:cover; border-radius:1.1rem; border:1px solid rgba(232,145,176,0.2); }
+    .visual strong { font-family: var(--display); font-size: 2rem; }
+    .visual p { color: var(--muted); margin: 0.3rem 0 0; }
+    .services { padding: 1rem 0 3.5rem; }
+    h2 { font-family: var(--display); font-size: clamp(2rem, 4vw, 2.8rem); margin: 0 0 1.2rem; }
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.9rem; }
+    .card {
+      background: var(--panel); border-radius: 1.2rem; padding: 1.3rem;
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+    .card h3 { margin: 0 0 0.45rem; font-size: 1.15rem; }
+    .card p { margin: 0; color: var(--muted); line-height: 1.5; font-size: 0.95rem; }
+    .card .price { margin-top: 0.9rem; color: var(--rose2); font-weight: 700; }
+    .hours {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem;
+      padding: 1.5rem; border-radius: 1.3rem; margin-bottom: 3rem;
+      background: rgba(232,145,176,0.08); border: 1px solid rgba(232,145,176,0.2);
+    }
+    .hours p { color: var(--muted); line-height: 1.55; }
+    .band {
+      text-align: center; padding: 2.3rem 1.3rem; border-radius: 1.5rem; margin-bottom: 3rem;
+      background: linear-gradient(135deg, rgba(232,145,176,0.18), rgba(255,176,137,0.08));
+      border: 1px solid rgba(232,145,176,0.25);
+    }
+    footer { padding: 1.4rem 0 2rem; border-top: 1px solid rgba(255,255,255,0.06); color: var(--muted); font-size: 0.88rem; display:flex; justify-content:space-between; gap:1rem; flex-wrap:wrap; }
+    footer a { color: var(--rose2); text-decoration: none; }
+    @media (max-width: 860px) {
+      .hero, .grid, .hours, .shot-row { grid-template-columns: 1fr; }
+      .nav a:not(.btn-main) { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap nav">
+      <div class="logo">Glow Salon</div>
+      <div>
+        <a href="#services">Services</a>
+        <a href="#visit">Visit</a>
+        <a class="btn btn-main" href="https://wa.me/918696666063?text=Hi%20Glow%20Salon%2C%20I%20want%20to%20book">Book now</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="hero">
+      <div>
+        <p class="eyebrow">Hair · Skin · Bridal</p>
+        <h1>Quiet luxury for your everyday glow.</h1>
+        <p class="lead">From weekday hair refresh to bridal trials — book your slot on WhatsApp and walk in without the calling chaos.</p>
+        <div class="actions">
+          <a class="btn btn-main" href="https://wa.me/918696666063?text=Hi%20Glow%20Salon%2C%20I%20want%20to%20book">Book on WhatsApp</a>
+          <a class="btn btn-line" href="#services">View services</a>
+        </div>
+      </div>
+      <aside class="visual">
+        <strong>Open today</strong>
+        <p>10:00 AM – 8:30 PM · Last booking 7:45 PM</p>
+      </aside>
+    </section>
+
+    <section class="services" id="services">
+      <h2>Signature services</h2>
+      <div class="shot-row">
+        <img src="/demos/img/salon-1.jpg" alt="Salon styling" />
+        <img src="/demos/img/salon-2.jpg" alt="Beauty makeup desk" />
+      </div>
+      <div class="grid">
+        <article class="card">
+          <h3>Hair studio</h3>
+          <p>Cut, global color, smoothening consults, and styling for events.</p>
+          <div class="price">From ₹499</div>
+        </article>
+        <article class="card">
+          <h3>Skin rituals</h3>
+          <p>Cleanup, glow facials, and hydration therapies for city skin.</p>
+          <div class="price">From ₹799</div>
+        </article>
+        <article class="card">
+          <h3>Bridal desk</h3>
+          <p>Trials, soft glam, and full bridal packages with timeline planning.</p>
+          <div class="price">Custom quote</div>
+        </article>
+      </div>
+    </section>
+
+    <section class="hours" id="visit">
+      <div>
+        <h2 style="font-size:1.8rem;">Visit us</h2>
+        <p>MG Road studio · Street parking nearby<br>Women’s and bridal appointments preferred with advance booking.</p>
+      </div>
+      <div>
+        <h2 style="font-size:1.8rem;">Booking tips</h2>
+        <p>Send service + preferred time on WhatsApp. We’ll confirm artist availability and deposit (if needed) before your slot.</p>
+      </div>
+    </section>
+
+    <section class="band">
+      <h2 style="margin:0 0 0.5rem;">Ready for your next appointment?</h2>
+      <p style="color:var(--muted);margin:0 auto 1.1rem;max-width:34ch;">Tell us what you need — hair, skin, or bridal trial.</p>
+      <a class="btn btn-main" href="https://wa.me/918696666063?text=Hi%20Glow%20Salon%2C%20I%20want%20to%20book">WhatsApp to book</a>
+    </section>
+  </main>
+
+  <footer class="wrap">
+    <span>© Glow Salon · Appointments via WhatsApp</span>
+    <a href="/">Site by BoostByRajat</a>
+  </footer>
+</body>
+</html>

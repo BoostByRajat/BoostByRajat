@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: boostbyrajat
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: AI_PROVIDER
+        value: groq
+      - key: VENDOR_LANG
+        value: hi
+      - key: GROQ_API_KEY
+        sync: false
+      - key: VENDOR_DESK_PASSWORD
+        sync: false
+      - key: WHATSAPP_NUMBER
+        sync: false
+      - key: PUBLIC_EMAIL
+        sync: false
+      - key: VITE_WHATSAPP_NUMBER
+        sync: false

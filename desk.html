@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Translate Desk — BoostByRajat</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="icon" href="/brand/logo.png" type="image/png" />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&family=Syne:wght@800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/src/style.css" />
+  <style>
+    .desk {
+      max-width: 720px;
+      margin: 2rem auto;
+      padding: 1.25rem;
+    }
+    .desk h1 {
+      font-family: Syne, sans-serif;
+      margin: 0 0 0.5rem;
+    }
+    .desk-panel {
+      display: grid;
+      gap: 0.85rem;
+      padding: 1.2rem;
+      border-radius: 1.2rem;
+      background: rgba(16, 24, 40, 0.72);
+      border: 1px solid rgba(232,163,23,0.28);
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-stage" aria-hidden="true">
+    <div class="orb orb-a"></div>
+    <div class="grid-floor"></div>
+  </div>
+  <header class="topbar">
+    <a class="brand-lockup" href="/">
+      <img src="/brand/logo.png" alt="BoostByRajat" class="brand-logo" width="44" height="44" />
+      <span class="brand-text">Translate <span>Desk</span></span>
+    </a>
+    <a class="btn btn-ghost btn-sm" href="/">← Site</a>
+  </header>
+  <main class="desk">
+    <h1>AI Translate Desk</h1>
+    <p style="color:#a9b0c0">Paste any WhatsApp / email message (Chinese, Arabic, etc.). Get Hindi/English meaning + reply draft in their language.</p>
+    <form id="deskForm" class="desk-panel">
+      <label>Desk password<input type="password" name="password" required autocomplete="current-password" /></label>
+      <label>Client message<textarea name="text" rows="7" required placeholder="Paste message here…"></textarea></label>
+      <button class="btn btn-amber" type="submit">Translate + draft reply</button>
+      <p id="deskStatus" class="form-status" hidden></p>
+    </form>
+    <div id="deskResult" class="ai-result" hidden>
+      <p><strong>Detected</strong>: <span id="dLang"></span></p>
+      <div class="ai-block"><h4>For you</h4><p id="dTrans"></p></div>
+      <div class="ai-block">
+        <h4>Reply draft (client language)</h4>
+        <p id="dReply"></p>
+        <button type="button" class="btn btn-ghost btn-sm" id="dCopy">Copy reply</button>
+      </div>
+    </div>
+  </main>
+  <script type="module" src="/src/desk.js"></script>
+</body>
+</html>

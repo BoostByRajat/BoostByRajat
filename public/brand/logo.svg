@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 160" role="img" aria-label="BoostByRajat">
+  <rect width="640" height="160" rx="24" fill="#0B1220"/>
+  <!-- chevron mark -->
+  <path d="M48 108l32-36 32 36" fill="none" stroke="#E8A317" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M48 84l32-36 32 36" fill="none" stroke="#E8A317" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- wordmark -->
+  <text x="140" y="102" font-family="Arial Black, Arial, Helvetica, sans-serif" font-size="52" font-weight="800" letter-spacing="-1">
+    <tspan fill="#E8A317">Boost</tspan><tspan fill="#F5F0E8">ByRajat</tspan>
+  </text>
+</svg>
