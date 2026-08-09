@@ -58,6 +58,25 @@ export function initNavToggle() {
   });
 }
 
+/** Custom cursor glow on fine pointers (desktop). Safe on all pages. */
+export function initCursorGlow() {
+  if (matchMedia('(pointer: coarse)').matches) return;
+
+  let glow = document.getElementById('cursorGlow');
+  if (!glow) {
+    glow = document.createElement('div');
+    glow.className = 'cursor-glow';
+    glow.id = 'cursorGlow';
+    glow.setAttribute('aria-hidden', 'true');
+    document.body.prepend(glow);
+  }
+
+  document.body.classList.add('custom-cursor');
+  window.addEventListener('pointermove', (e) => {
+    glow.style.transform = `translate3d(${e.clientX}px, ${e.clientY}px, 0)`;
+  });
+}
+
 export function indiaFlagSvg() {
   return `<svg class="india-flag" viewBox="0 0 30 20" width="22" height="15" aria-hidden="true" focusable="false">
     <rect width="30" height="6.67" y="0" fill="#FF9933"/>

@@ -24,11 +24,26 @@ body {
   color: var(--cream);
   background: var(--bg);
   overflow-x: hidden;
+  cursor: auto;
+}
+a, button, select, input, textarea { cursor: auto; }
+body.custom-cursor,
+body.custom-cursor a,
+body.custom-cursor button,
+body.custom-cursor select,
+body.custom-cursor input,
+body.custom-cursor textarea {
   cursor: none;
 }
-a, button, select, input, textarea { cursor: none; }
 @media (pointer: coarse) {
-  body, a, button, select, input, textarea { cursor: auto; }
+  body.custom-cursor,
+  body.custom-cursor a,
+  body.custom-cursor button,
+  body.custom-cursor select,
+  body.custom-cursor input,
+  body.custom-cursor textarea {
+    cursor: auto;
+  }
   .cursor-glow { display: none !important; }
 }
 
@@ -1062,7 +1077,7 @@ body.nav-open { overflow: hidden; }
   position: fixed;
   left: max(1rem, env(safe-area-inset-left));
   bottom: max(1rem, env(safe-area-inset-bottom));
-  z-index: 50;
+  z-index: 60;
   min-width: 52px;
   min-height: 52px;
   border: 0;
@@ -1077,9 +1092,10 @@ body.nav-open { overflow: hidden; }
   position: fixed;
   left: max(0.75rem, env(safe-area-inset-left));
   bottom: calc(4.5rem + env(safe-area-inset-bottom));
-  z-index: 55;
+  z-index: 65;
   width: min(380px, calc(100vw - 1.5rem));
-  max-height: min(70vh, 560px);
+  height: min(62vh, 520px);
+  max-height: min(62vh, 520px);
   display: flex;
   flex-direction: column;
   border-radius: 1.2rem;
@@ -1088,30 +1104,44 @@ body.nav-open { overflow: hidden; }
   box-shadow: 0 24px 60px rgba(0,0,0,0.55);
   overflow: hidden;
 }
+.chat-panel[hidden] {
+  display: none !important;
+}
 .chat-head {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   gap: 0.75rem;
-  padding: 0.9rem 1rem;
+  padding: 0.75rem 0.85rem;
   border-bottom: 1px solid rgba(255,255,255,0.08);
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: rgba(8,12,22,0.98);
 }
 .chat-head strong { display: block; }
 .chat-head span { color: var(--muted); font-size: 0.78rem; }
 .chat-close {
-  border: 0;
-  background: transparent;
+  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.08);
   color: var(--cream);
-  font-size: 1.4rem;
+  font-size: 1.35rem;
   line-height: 1;
-  min-width: 40px;
-  min-height: 40px;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 0.75rem;
+  flex-shrink: 0;
+  touch-action: manipulation;
 }
 .chat-msgs {
-  flex: 1;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   padding: 0.85rem;
   display: grid;
+  align-content: start;
   gap: 0.55rem;
 }
 .chat-bubble {
@@ -1134,9 +1164,12 @@ body.nav-open { overflow: hidden; }
 }
 .chat-suggest {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 0.4rem;
   padding: 0 0.85rem 0.5rem;
+  flex-shrink: 0;
+  overflow-x: auto;
+  max-height: 3.2rem;
 }
 .chat-suggest button {
   border: 1px solid rgba(255,255,255,0.12);
@@ -1146,6 +1179,8 @@ body.nav-open { overflow: hidden; }
   padding: 0.4rem 0.7rem;
   font-size: 0.78rem;
   min-height: 36px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .chat-form {
   display: grid;
@@ -1153,6 +1188,7 @@ body.nav-open { overflow: hidden; }
   gap: 0.45rem;
   padding: 0.65rem 0.85rem;
   border-top: 1px solid rgba(255,255,255,0.08);
+  flex-shrink: 0;
 }
 .chat-form input {
   min-height: 44px;
@@ -1168,8 +1204,12 @@ body.nav-open { overflow: hidden; }
   padding: 0 0.85rem 0.75rem;
   color: var(--muted);
   font-size: 0.75rem;
+  flex-shrink: 0;
 }
 .chat-foot a { color: var(--amber); }
+body.chat-open .chat-fab {
+  z-index: 70;
+}
 
 .leads-box {
   margin-top: 1.5rem;
@@ -1218,12 +1258,21 @@ body.nav-open { overflow: hidden; }
     right: 0;
     bottom: 0;
     width: 100%;
-    max-height: min(85vh, 640px);
+    height: min(58vh, 420px);
+    max-height: min(58vh, 420px);
     border-radius: 1.2rem 1.2rem 0 0;
+  }
+  .chat-panel[hidden] {
+    display: none !important;
   }
   .wa-sticky { right: max(0.75rem, env(safe-area-inset-right)); bottom: max(4.6rem, calc(3.8rem + env(safe-area-inset-bottom))); }
   .chat-fab { bottom: max(1rem, env(safe-area-inset-bottom)); }
   body.chat-open .wa-sticky { opacity: 0.35; pointer-events: none; }
+  body.chat-open .chat-fab {
+    bottom: calc(min(58vh, 420px) + 0.65rem);
+    left: 50%;
+    transform: translateX(-50%);
+  }
 }
 
 @media (max-width: 480px) {

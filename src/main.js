@@ -1,14 +1,6 @@
 import { initI18n, currentLang, t } from './i18n.js';
-import { initNavToggle, wireWhatsApp } from './shell.js';
+import { initNavToggle, wireWhatsApp, initCursorGlow } from './shell.js';
 import { initChat } from './chat.js';
-
-function initCursorGlow() {
-  const glow = document.getElementById('cursorGlow');
-  if (!glow || matchMedia('(pointer: coarse)').matches) return;
-  window.addEventListener('pointermove', (e) => {
-    glow.style.transform = `translate3d(${e.clientX}px, ${e.clientY}px, 0)`;
-  });
-}
 
 function initParticles() {
   const canvas = document.getElementById('fx');
@@ -186,8 +178,8 @@ function initForm() {
 initI18n();
 initNavToggle();
 wireWhatsApp();
-initChat();
 initCursorGlow();
+initChat();
 initParticles();
 initLogo3d();
 initServiceLinks();

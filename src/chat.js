@@ -13,14 +13,14 @@ export function initChat() {
   const root = document.createElement('div');
   root.id = 'chatRoot';
   root.innerHTML = `
-    <button type="button" class="chat-fab" id="chatFab" aria-label="Open chat">Chat</button>
+    <button type="button" class="chat-fab" id="chatFab" aria-label="Open chat" aria-expanded="false">Chat</button>
     <div class="chat-panel" id="chatPanel" hidden>
       <header class="chat-head">
         <div>
           <strong>BoostByRajat</strong>
           <span>AI assistant · Hindi / English</span>
         </div>
-        <button type="button" class="chat-close" id="chatClose" aria-label="Close">×</button>
+        <button type="button" class="chat-close" id="chatClose" aria-label="Close chat">×</button>
       </header>
       <div class="chat-msgs" id="chatMsgs" role="log" aria-live="polite"></div>
       <div class="chat-suggest" id="chatSuggest"></div>
@@ -54,6 +54,8 @@ export function initChat() {
   function open() {
     panel.hidden = false;
     fab.setAttribute('aria-expanded', 'true');
+    fab.textContent = 'Close';
+    fab.setAttribute('aria-label', 'Close chat');
     document.body.classList.add('chat-open');
     if (!msgs.childElementCount) {
       addMsg(
@@ -61,13 +63,16 @@ export function initChat() {
         'Namaste! Main BoostByRajat assistant hoon. Websites, apps, Instagram handling aur ads ke baare mein poochho. Order ke liye WhatsApp best hai.'
       );
     }
-    input.focus();
+    setTimeout(() => input.focus(), 50);
   }
 
   function close() {
     panel.hidden = true;
     fab.setAttribute('aria-expanded', 'false');
+    fab.textContent = 'Chat';
+    fab.setAttribute('aria-label', 'Open chat');
     document.body.classList.remove('chat-open');
+    input.blur();
   }
 
   SUGGESTIONS.forEach((s) => {
@@ -81,8 +86,22 @@ export function initChat() {
     suggest.appendChild(b);
   });
 
-  fab.addEventListener('click', () => (panel.hidden ? open() : close()));
-  closeBtn.addEventListener('click', close);
+  fab.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (panel.hidden) open();
+    else close();
+  });
+
+  closeBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    close();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !panel.hidden) close();
+  });
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
