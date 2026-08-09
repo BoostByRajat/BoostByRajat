@@ -918,40 +918,58 @@ textarea { resize: vertical; min-height: 130px; }
   border-radius: 1.4rem;
   border: 1px solid rgba(255,176,0,0.18);
   background:
-    radial-gradient(500px 220px at 50% 40%, rgba(255,176,0,0.1), transparent 60%),
-    rgba(255,255,255,0.02);
+    radial-gradient(500px 220px at 55% 42%, rgba(255,176,0,0.12), transparent 60%),
+    #070d18;
   overflow: hidden;
-  min-height: 260px;
+  min-height: 240px;
 }
-.world-map {
+.world-map-img {
   width: 100%;
   height: auto;
   display: block;
-  opacity: 0.95;
+  opacity: 0.9;
+  filter: invert(1) brightness(0.55) sepia(0.55) hue-rotate(170deg) saturate(1.4);
+  mix-blend-mode: screen;
 }
-.world-dots .dot {
-  fill: #00f0c8;
-  filter: drop-shadow(0 0 6px rgba(0,240,200,0.8));
+.world-pins {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.world-pins .pin {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  margin: -4.5px 0 0 -4.5px;
+  border-radius: 50%;
+  background: #00f0c8;
+  box-shadow: 0 0 0 3px rgba(0,240,200,0.2), 0 0 12px rgba(0,240,200,0.85);
   animation: dotPulse 2.4s ease-in-out infinite;
-  transform-box: fill-box;
-  transform-origin: center;
 }
-.world-dots .dot.hub {
-  fill: #ffb000;
-  filter: drop-shadow(0 0 10px rgba(255,176,0,0.95));
+.world-pins .pin.hub {
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  background: #ffb000;
+  box-shadow: 0 0 0 4px rgba(255,176,0,0.22), 0 0 18px rgba(255,176,0,0.95);
   animation-duration: 1.8s;
 }
-.world-dots .dot:nth-child(2) { animation-delay: 0.2s; }
-.world-dots .dot:nth-child(3) { animation-delay: 0.4s; }
-.world-dots .dot:nth-child(4) { animation-delay: 0.6s; }
-.world-dots .dot:nth-child(5) { animation-delay: 0.8s; }
-.world-arc {
+.world-arcs {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.world-arcs .world-arc {
+  fill: none;
+  stroke: rgba(255,176,0,0.45);
+  stroke-width: 0.35;
+  stroke-dasharray: 1.2 1.4;
   animation: arcGlow 3.5s ease-in-out infinite;
 }
-@keyframes dotPulse {
-  0%, 100% { opacity: 0.5; }
-  50% { opacity: 1; }
-}
+.world-map { display: none; }
+.world-dots .dot { display: none; }
 @keyframes arcGlow {
   0%, 100% { opacity: 0.25; }
   50% { opacity: 0.7; }
@@ -1404,3 +1422,7 @@ body.chat-open .chat-fab {
   .hero-ctas { flex-direction: column; align-items: stretch; }
   .hero-ctas .btn { width: 100%; justify-content: center; }
 }
+
+@keyframes dotPulse { 0%,100%{opacity:0.5} 50%{opacity:1} }
+@keyframes arcGlow { 0%,100%{opacity:0.3} 50%{opacity:0.85} }
+
