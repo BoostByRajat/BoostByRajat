@@ -127,7 +127,7 @@ Services & rough INR pricing (domain/hosting/ad spend NOT included):
 - Instagram monthly: Basic ₹4,999 · Standard ₹7,999 · Growth ₹12,999
 - Ads management: ₹5,000–12,000/mo; client pays ad spend separately
 - First 3 clients: special launch pricing (honest new studio)
-Process: WhatsApp enquiry → clear quote → 40–50% advance typical → build → delivery. UPI accepted. GST invoice on request.
+Process: WhatsApp enquiry → clear quote → 40–50% advance typical → build → delivery. UPI accepted. No GST for now.
 Pages: /products/websites.html /products/apps.html /products/instagram.html /products/ads.html · offers list /collect.html · legal /legal/terms.html /legal/refund.html /legal/privacy.html
 Rules:
 - Reply in the user's language (Hindi or English mainly). Keep 2–6 short sentences.
