@@ -4,6 +4,7 @@ export const site = {
   tagline: 'Apps, websites, Instagram & ads — built and boosted by one maker.',
   whatsapp: '918696666063',
   email: 'rajatbissa16@gmail.com',
+  instagram: 'https://instagram.com/BoostByRajat',
   logo: '/brand/logo.png',
   services: [
     { id: 'website', icon: '◈' },
