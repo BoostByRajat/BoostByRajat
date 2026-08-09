@@ -2,7 +2,7 @@ import { initNavToggle, wireWhatsApp, initCursorGlow, ensureIndiaFlag } from './
 import { initChat } from './chat.js';
 
 initNavToggle();
-wireWhatsApp(['waTop', 'waHero', 'waBand', 'waOffer', 'waPage']);
+wireWhatsApp(['waTop', 'waHero', 'waSticky', 'waBand', 'waOffer', 'waPage']);
 initCursorGlow();
 ensureIndiaFlag();
 initChat();

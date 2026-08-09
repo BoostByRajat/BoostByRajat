@@ -112,7 +112,7 @@ function initOfferLinks() {
 
 function initReveal() {
   const els = document.querySelectorAll(
-    '.section-head, .svc-row, .work-panel, .steps li, .enquiry, .trust-item, .price-card, .faq-item, .cta-band-inner, .offer-inner, .honest-box, .page-card, .demo-card'
+    '.section-head, .svc-row, .work-panel, .steps li, .enquiry, .trust-item, .price-card, .faq-item, .cta-band-inner, .offer-inner, .honest-box, .page-card, .demo-card, .world-globe, .world-points li'
   );
   els.forEach((el) => el.classList.add('reveal'));
   const io = new IntersectionObserver(
@@ -177,7 +177,7 @@ function initForm() {
 
 initI18n();
 initNavToggle();
-wireWhatsApp(['waTop', 'waHero', 'waBand', 'waOffer', 'waPage']);
+wireWhatsApp(['waTop', 'waHero', 'waSticky', 'waBand', 'waOffer', 'waPage']);
 initCursorGlow();
 ensureIndiaFlag();
 initChat();
