@@ -77,6 +77,15 @@ export function initCursorGlow() {
   });
 }
 
+/** Ensure Made in India shows the flag SVG everywhere. */
+export function ensureIndiaFlag() {
+  const svg = indiaFlagSvg();
+  document.querySelectorAll('.made-in-india').forEach((el) => {
+    if (el.querySelector('svg.india-flag')) return;
+    el.insertAdjacentHTML('afterbegin', `${svg} `);
+  });
+}
+
 export function indiaFlagSvg() {
   return `<svg class="india-flag" viewBox="0 0 30 20" width="22" height="15" aria-hidden="true" focusable="false">
     <rect width="30" height="6.67" y="0" fill="#FF9933"/>

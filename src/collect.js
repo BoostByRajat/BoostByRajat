@@ -1,9 +1,10 @@
-import { initNavToggle, wireWhatsApp, initCursorGlow } from './shell.js';
+import { initNavToggle, wireWhatsApp, initCursorGlow, ensureIndiaFlag } from './shell.js';
 import { initChat } from './chat.js';
 
 initNavToggle();
-wireWhatsApp();
+wireWhatsApp(['waTop', 'waPage']);
 initCursorGlow();
+ensureIndiaFlag();
 initChat();
 
 const form = document.getElementById('collectForm');

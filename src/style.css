@@ -858,26 +858,20 @@ textarea { resize: vertical; min-height: 130px; }
 }
 .india-flag {
   display: inline-block;
-  width: 1.35rem;
-  height: auto;
+  width: 1.4rem;
+  height: 0.95rem;
   border-radius: 2px;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.15);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2);
   flex-shrink: 0;
+  vertical-align: middle;
+}
+.made-in-india svg.india-flag {
+  width: 1.4rem;
+  height: 0.95rem;
 }
 
 .wa-sticky {
-  position: fixed;
-  right: max(1rem, env(safe-area-inset-right));
-  bottom: max(1rem, env(safe-area-inset-bottom));
-  z-index: 50;
-  background: linear-gradient(135deg, #25d366, #0f9f5b);
-  color: #fff;
-  text-decoration: none;
-  font-weight: 800;
-  padding: 0.95rem 1.2rem;
-  min-height: 44px;
-  border-radius: 999px;
-  box-shadow: 0 14px 36px rgba(15,159,91,0.5);
+  display: none !important;
 }
 
 .nav-toggle {
@@ -1265,9 +1259,7 @@ body.chat-open .chat-fab {
   .chat-panel[hidden] {
     display: none !important;
   }
-  .wa-sticky { right: max(0.75rem, env(safe-area-inset-right)); bottom: max(4.6rem, calc(3.8rem + env(safe-area-inset-bottom))); }
   .chat-fab { bottom: max(1rem, env(safe-area-inset-bottom)); }
-  body.chat-open .wa-sticky { opacity: 0.35; pointer-events: none; }
   body.chat-open .chat-fab {
     bottom: calc(min(58vh, 420px) + 0.65rem);
     left: 50%;

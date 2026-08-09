@@ -1,5 +1,5 @@
 import { initI18n, currentLang, t } from './i18n.js';
-import { initNavToggle, wireWhatsApp, initCursorGlow } from './shell.js';
+import { initNavToggle, wireWhatsApp, initCursorGlow, ensureIndiaFlag } from './shell.js';
 import { initChat } from './chat.js';
 
 function initParticles() {
@@ -177,8 +177,9 @@ function initForm() {
 
 initI18n();
 initNavToggle();
-wireWhatsApp();
+wireWhatsApp(['waTop', 'waHero', 'waBand', 'waOffer', 'waPage']);
 initCursorGlow();
+ensureIndiaFlag();
 initChat();
 initParticles();
 initLogo3d();
