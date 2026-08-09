@@ -30,8 +30,8 @@
 </head>
 <body>
   <div class="bg-stage" aria-hidden="true">
-    <div class="orb orb-a"></div>
-    <div class="grid-floor"></div>
+    <div class="wash wash-gold"></div>
+    <div class="vignette"></div>
   </div>
   <header class="topbar">
     <a class="brand-lockup" href="/">
@@ -42,7 +42,7 @@
   </header>
   <main class="desk">
     <h1>AI Translate Desk</h1>
-    <p style="color:#a9b0c0">Paste any WhatsApp / email message (Chinese, Arabic, etc.). Get Hindi/English meaning + reply draft in their language.</p>
+    <p style="color:#a9b0c0">Paste any WhatsApp / email message. Get Hindi/English meaning + reply draft in their language.</p>
     <form id="deskForm" class="desk-panel">
       <label>Desk password<input type="password" name="password" required autocomplete="current-password" /></label>
       <label>Client message<textarea name="text" rows="7" required placeholder="Paste message here…"></textarea></label>
@@ -58,6 +58,15 @@
         <button type="button" class="btn btn-ghost btn-sm" id="dCopy">Copy reply</button>
       </div>
     </div>
+
+    <section class="leads-box page-card" style="margin-top:2rem">
+      <h2 style="margin:0">Leads / offers list</h2>
+      <p style="color:var(--muted);margin:0">Same desk password. Export for ads audiences. Re-deploy may reset file storage on free host — copy often.</p>
+      <button type="button" class="btn btn-ghost btn-sm" id="loadLeads">Load leads</button>
+      <button type="button" class="btn btn-amber btn-sm" id="copyLeads">Copy CSV</button>
+      <textarea id="leadsOut" readonly placeholder="Leads appear here…"></textarea>
+      <p id="leadsStatus" class="form-status" hidden></p>
+    </section>
   </main>
   <script type="module" src="/src/desk.js"></script>
 </body>

@@ -2,6 +2,10 @@ const form = document.getElementById('deskForm');
 const status = document.getElementById('deskStatus');
 const result = document.getElementById('deskResult');
 
+function deskPassword() {
+  return form?.password?.value || '';
+}
+
 form?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const fd = new FormData(form);
@@ -32,4 +36,64 @@ form?.addEventListener('submit', async (e) => {
 document.getElementById('dCopy')?.addEventListener('click', async () => {
   const text = document.getElementById('dReply')?.textContent || '';
   await navigator.clipboard.writeText(text);
+});
+
+let lastLeads = [];
+
+function toCsv(leads) {
+  const header = ['createdAt', 'name', 'email', 'whatsapp', 'location', 'interest', 'source'];
+  const rows = leads.map((l) =>
+    [
+      l.createdAt || '',
+      l.name || '',
+      l.email || '',
+      l.whatsapp || '',
+      l.location || '',
+      (l.interest || []).join('|'),
+      l.source || '',
+    ]
+      .map((cell) => `"${String(cell).replace(/"/g, '""')}"`)
+      .join(',')
+  );
+  return [header.join(','), ...rows].join('\n');
+}
+
+document.getElementById('loadLeads')?.addEventListener('click', async () => {
+  const leadsStatus = document.getElementById('leadsStatus');
+  const out = document.getElementById('leadsOut');
+  leadsStatus.hidden = false;
+  leadsStatus.textContent = 'Loading…';
+  try {
+    const res = await fetch('/api/leads/list', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: deskPassword() }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed');
+    lastLeads = data.leads || [];
+    out.value = lastLeads.length
+      ? lastLeads
+          .map(
+            (l) =>
+              `${l.createdAt} | ${l.name || '-'} | ${l.email} | ${l.whatsapp} | ${l.location} | ${(l.interest || []).join(',')}`
+          )
+          .join('\n')
+      : 'No leads yet.';
+    leadsStatus.textContent = `${lastLeads.length} lead(s)`;
+  } catch (err) {
+    leadsStatus.textContent = err.message || 'Error';
+  }
+});
+
+document.getElementById('copyLeads')?.addEventListener('click', async () => {
+  const leadsStatus = document.getElementById('leadsStatus');
+  if (!lastLeads.length) {
+    leadsStatus.hidden = false;
+    leadsStatus.textContent = 'Load leads first';
+    return;
+  }
+  await navigator.clipboard.writeText(toCsv(lastLeads));
+  leadsStatus.hidden = false;
+  leadsStatus.textContent = 'CSV copied';
 });

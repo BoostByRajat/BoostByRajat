@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Get Offers — BoostByRajat</title>
+  <meta name="description" content="Join the BoostByRajat offers list — share email, WhatsApp and city for promotions and launch deals." />
+  <meta name="robots" content="index,follow" />
+  <link rel="canonical" href="https://boostbyrajat.onrender.com/collect.html" />
+  <meta property="og:title" content="Get Offers — BoostByRajat" />
+  <meta property="og:description" content="Leave email, WhatsApp and location to receive offers and promo updates." />
+  <meta property="og:image" content="/brand/logo.png" />
+  <link rel="icon" href="/brand/logo.png" type="image/png" />
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <div class="bg-stage" aria-hidden="true"><div class="wash wash-gold"></div><div class="wash wash-teal"></div><div class="vignette"></div></div>
+  <header class="topbar">
+    <a class="brand-lockup" href="/"><img src="/brand/logo.png" alt="BoostByRajat" class="brand-logo" width="40" height="40" /><span class="brand-text">Boost<span>By</span>Rajat</span></a>
+    <nav class="nav-links" aria-label="Primary">
+      <a href="/products/websites.html">Websites</a>
+      <a href="/products/apps.html">Apps</a>
+      <a href="/products/instagram.html">Instagram</a>
+      <a href="/products/ads.html">Ads</a>
+      <a href="/collect.html">Offers</a>
+      <a href="/#order">Order</a>
+    </nav>
+    <div class="top-actions">
+      <button type="button" class="nav-toggle" id="navToggle" aria-expanded="false" aria-controls="navDrawer">Menu</button>
+      <a id="waTop" class="btn btn-amber btn-sm" href="#" target="_blank" rel="noopener">WhatsApp</a>
+    </div>
+  </header>
+  <nav class="nav-drawer" id="navDrawer" aria-label="Mobile">
+    <p class="drawer-label">Products</p>
+    <a href="/products/websites.html">Websites</a>
+    <a href="/products/apps.html">Apps</a>
+    <a href="/products/instagram.html">Instagram</a>
+    <a href="/products/ads.html">Ads</a>
+    <p class="drawer-label">More</p>
+    <a href="/collect.html">Get offers</a>
+    <a href="/#order">Order</a>
+    <a href="/legal/privacy.html">Privacy</a>
+  </nav>
+
+  <main>
+    <section class="page-hero">
+      <p class="eyebrow">Offers list</p>
+      <h1>Get launch deals & promo updates</h1>
+      <p class="lead">Share email, WhatsApp and city so I can send offers and run relevant promotions. You can ask to be removed anytime.</p>
+    </section>
+    <section class="page-section">
+      <form id="collectForm" class="collect-form page-card">
+        <label>Name (optional)
+          <input type="text" name="name" maxlength="80" placeholder="Your name" autocomplete="name" />
+        </label>
+        <label>Email
+          <input type="email" name="email" required maxlength="120" placeholder="you@email.com" autocomplete="email" />
+        </label>
+        <label>WhatsApp number
+          <input type="tel" name="whatsapp" required maxlength="20" placeholder="91XXXXXXXXXX" autocomplete="tel" />
+        </label>
+        <label>Location / city
+          <input type="text" name="location" required maxlength="80" placeholder="Jaipur, Delhi, Dubai…" autocomplete="address-level2" />
+        </label>
+        <div>
+          <p style="margin:0 0 0.5rem;font-weight:600">Interested in</p>
+          <div class="interest-grid">
+            <label><input type="checkbox" name="interest" value="website" /> Website</label>
+            <label><input type="checkbox" name="interest" value="app" /> App</label>
+            <label><input type="checkbox" name="interest" value="instagram" /> Instagram</label>
+            <label><input type="checkbox" name="interest" value="ads" /> Ads</label>
+            <label><input type="checkbox" name="interest" value="updates" /> Just updates</label>
+          </div>
+        </div>
+        <label class="consent-row">
+          <input type="checkbox" name="consent" required />
+          <span>I agree to receive offers, promotions and updates on email/WhatsApp. See <a href="/legal/privacy.html">Privacy</a>.</span>
+        </label>
+        <button class="btn btn-amber" type="submit">Join offers list</button>
+        <p id="collectStatus" class="form-status" hidden></p>
+      </form>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-links">
+      <a href="/">Home</a><a href="/legal/privacy.html">Privacy</a><a href="/legal/terms.html">Terms</a>
+    </div>
+    <p class="made-in-india" aria-label="Made in India">Made in India</p>
+  </footer>
+  <a id="waSticky" class="wa-sticky" href="#" target="_blank" rel="noopener">WhatsApp</a>
+  <script type="module" src="/src/collect.js"></script>
+</body>
+</html>

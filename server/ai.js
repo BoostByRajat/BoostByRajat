@@ -112,3 +112,43 @@ export async function detectOnly(text) {
   const parsed = parseJson(raw);
   return { detectedLang: parsed.detectedLang || 'unknown', provider: provider() };
 }
+
+export async function siteAssistantReply({ message, history = [] }) {
+  const hist = (Array.isArray(history) ? history : [])
+    .slice(-8)
+    .map((m) => `${m.role || 'user'}: ${String(m.content || '').slice(0, 400)}`)
+    .join('\n');
+
+  const prompt = `
+You are the on-site chat assistant for BoostByRajat (solo digital studio from India, serving worldwide).
+Services & rough INR pricing (domain/hosting/ad spend NOT included):
+- Websites: Starter ₹7,500–11,000 · Business ₹18,000–21,000 · Custom ₹35,000+
+- Apps: usually from Custom ₹35,000+ (quote based on scope)
+- Instagram monthly: Basic ₹4,999 · Standard ₹7,999 · Growth ₹12,999
+- Ads management: ₹5,000–12,000/mo; client pays ad spend separately
+- First 3 clients: special launch pricing (honest new studio)
+Process: WhatsApp enquiry → clear quote → 40–50% advance typical → build → delivery. UPI accepted. GST invoice on request.
+Pages: /products/websites.html /products/apps.html /products/instagram.html /products/ads.html · offers list /collect.html · legal /legal/terms.html /legal/refund.html /legal/privacy.html
+Rules:
+- Reply in the user's language (Hindi or English mainly). Keep 2–6 short sentences.
+- Be honest: no fake client claims or fake reviews.
+- Push WhatsApp for booking; mention /collect.html for offers/promo list.
+- Never invent exact custom quotes; give ranges and ask for brief requirements.
+Return JSON only: {"reply":"..."}
+
+Recent chat:
+${hist || '(none)'}
+
+User message:
+"""
+${message}
+"""
+`;
+
+  const raw = await chat(prompt);
+  const parsed = parseJson(raw);
+  return {
+    reply: parsed.reply || 'WhatsApp pe likho — main detail share karunga.',
+    provider: provider(),
+  };
+}

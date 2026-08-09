@@ -1,51 +1,6 @@
 import { initI18n, currentLang, t } from './i18n.js';
-import { site } from './config.js';
-
-const waNumber = (
-  import.meta.env.VITE_WHATSAPP_NUMBER ||
-  site.whatsapp ||
-  ''
-).replace(/\D/g, '');
-
-function waLink(text = 'Hi BoostByRajat, I want to place an order.') {
-  if (!waNumber) return '#order';
-  return `https://wa.me/${waNumber}?text=${encodeURIComponent(text)}`;
-}
-
-function wireWhatsApp() {
-  const href = waLink();
-  const offerHref = waLink('Hi BoostByRajat — I want the First 3 clients special pricing.');
-  ['waTop', 'waHero', 'waSticky', 'waBand'].forEach((id) => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.href = href;
-    if (!waNumber) {
-      el.addEventListener('click', (e) => {
-        e.preventDefault();
-        document.getElementById('order')?.scrollIntoView({ behavior: 'smooth' });
-      });
-    }
-  });
-  const offer = document.getElementById('waOffer');
-  if (offer) {
-    offer.href = offerHref;
-    if (!waNumber) {
-      offer.addEventListener('click', (e) => {
-        e.preventDefault();
-        document.getElementById('order')?.scrollIntoView({ behavior: 'smooth' });
-      });
-    }
-  }
-}
-
-function initOfferLinks() {
-  document.querySelectorAll('.wa-offer[data-service]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const select = document.getElementById('serviceSelect');
-      if (select) select.value = btn.dataset.service;
-    });
-  });
-}
+import { initNavToggle, wireWhatsApp } from './shell.js';
+import { initChat } from './chat.js';
 
 function initCursorGlow() {
   const glow = document.getElementById('cursorGlow');
@@ -154,9 +109,18 @@ function initServiceLinks() {
   });
 }
 
+function initOfferLinks() {
+  document.querySelectorAll('.wa-offer[data-service]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const select = document.getElementById('serviceSelect');
+      if (select) select.value = btn.dataset.service;
+    });
+  });
+}
+
 function initReveal() {
   const els = document.querySelectorAll(
-    '.section-head, .svc-row, .work-panel, .steps li, .enquiry, .trust-item, .price-card, .faq-item, .cta-band-inner, .offer-inner, .honest-box'
+    '.section-head, .svc-row, .work-panel, .steps li, .enquiry, .trust-item, .price-card, .faq-item, .cta-band-inner, .offer-inner, .honest-box, .page-card, .demo-card'
   );
   els.forEach((el) => el.classList.add('reveal'));
   const io = new IntersectionObserver(
@@ -220,7 +184,9 @@ function initForm() {
 }
 
 initI18n();
+initNavToggle();
 wireWhatsApp();
+initChat();
 initCursorGlow();
 initParticles();
 initLogo3d();
