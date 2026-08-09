@@ -841,7 +841,14 @@ textarea { resize: vertical; min-height: 130px; }
   border: 1px solid rgba(255,255,255,0.12);
   background: rgba(255,255,255,0.04);
 }
-.india-flag { font-size: 1.25rem; }
+.india-flag {
+  display: inline-block;
+  width: 1.35rem;
+  height: auto;
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.15);
+  flex-shrink: 0;
+}
 
 .wa-sticky {
   position: fixed;
