@@ -41,16 +41,18 @@ document.getElementById('dCopy')?.addEventListener('click', async () => {
 let lastLeads = [];
 
 function toCsv(leads) {
-  const header = ['createdAt', 'name', 'email', 'whatsapp', 'location', 'interest', 'source'];
+  const header = ['createdAt', 'source', 'name', 'email', 'whatsapp', 'location', 'service', 'interest', 'message'];
   const rows = leads.map((l) =>
     [
       l.createdAt || '',
+      l.source || '',
       l.name || '',
       l.email || '',
       l.whatsapp || '',
       l.location || '',
+      l.service || '',
       (l.interest || []).join('|'),
-      l.source || '',
+      l.message || '',
     ]
       .map((cell) => `"${String(cell).replace(/"/g, '""')}"`)
       .join(',')
@@ -76,7 +78,7 @@ document.getElementById('loadLeads')?.addEventListener('click', async () => {
       ? lastLeads
           .map(
             (l) =>
-              `${l.createdAt} | ${l.name || '-'} | ${l.email} | ${l.whatsapp} | ${l.location} | ${(l.interest || []).join(',')}`
+              `${l.createdAt} | ${l.source || '-'} | ${l.name || '-'} | ${l.email} | ${l.whatsapp} | ${l.service || (l.interest || []).join(',')} | ${(l.message || '').slice(0, 80)}`
           )
           .join('\n')
       : 'No leads yet.';

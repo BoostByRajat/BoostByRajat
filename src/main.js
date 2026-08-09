@@ -1,4 +1,4 @@
-import { initI18n, currentLang, t } from './i18n.js';
+import { initI18n, t } from './i18n.js';
 import { initNavToggle, wireWhatsApp, initCursorGlow, ensureIndiaFlag } from './shell.js';
 import { initChat } from './chat.js';
 
@@ -129,27 +129,24 @@ function initReveal() {
 function initForm() {
   const form = document.getElementById('enquiryForm');
   const status = document.getElementById('formStatus');
-  const result = document.getElementById('aiResult');
   if (!form) return;
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const fd = new FormData(form);
     const payload = {
-      name: fd.get('name'),
-      email: fd.get('email'),
-      phone: fd.get('phone'),
-      service: fd.get('service'),
-      message: fd.get('message'),
-      lang: currentLang(),
+      name: String(fd.get('name') || '').trim(),
+      email: String(fd.get('email') || '').trim(),
+      phone: String(fd.get('phone') || '').trim(),
+      service: String(fd.get('service') || 'other'),
+      message: String(fd.get('message') || '').trim(),
     };
 
     status.hidden = false;
     status.textContent = t('form_working');
-    result.hidden = true;
 
     try {
-      const res = await fetch('/api/enquiry', {
+      const res = await fetch('/api/order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -157,21 +154,14 @@ function initForm() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed');
 
-      document.getElementById('detectedLang').textContent = data.detectedLang || '-';
-      document.getElementById('translationOut').textContent = data.translation || '';
-      document.getElementById('replyOut').textContent = data.replyDraft || '';
-      const mail = document.getElementById('mailtoLink');
-      if (mail) mail.href = data.mailto || '#';
-      result.hidden = false;
-      status.textContent = data.summary || 'OK';
+      status.textContent = t('form_done') || 'Saved — WhatsApp opening…';
+      form.reset();
+      if (data.whatsappUrl) {
+        window.open(data.whatsappUrl, '_blank', 'noopener');
+      }
     } catch (err) {
       status.textContent = err.message || 'Error';
     }
-  });
-
-  document.getElementById('copyReply')?.addEventListener('click', async () => {
-    const text = document.getElementById('replyOut')?.textContent || '';
-    await navigator.clipboard.writeText(text);
   });
 }
 

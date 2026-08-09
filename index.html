@@ -416,10 +416,10 @@
       <form id="enquiryForm" class="enquiry">
         <div class="grid-2">
           <label><span data-i18n="form_name"></span><input name="name" required autocomplete="name" /></label>
-          <label><span data-i18n="form_email"></span><input name="email" type="email" autocomplete="email" /></label>
+          <label><span data-i18n="form_email"></span><input name="email" type="email" required autocomplete="email" /></label>
         </div>
         <div class="grid-2">
-          <label><span data-i18n="form_phone"></span><input name="phone" autocomplete="tel" /></label>
+          <label><span data-i18n="form_phone"></span><input name="phone" required autocomplete="tel" /></label>
           <label>
             <span data-i18n="form_service"></span>
             <select name="service" id="serviceSelect">
@@ -433,26 +433,11 @@
         </div>
         <label>
           <span data-i18n="form_message"></span>
-          <textarea name="message" rows="5" required placeholder="你好 / Hello / नमस्ते…"></textarea>
+          <textarea name="message" rows="5" required placeholder="Website chahiye / Instagram handling…"></textarea>
         </label>
-        <button class="btn btn-amber" type="submit" data-i18n="form_submit">Translate & send</button>
+        <button class="btn btn-amber" type="submit" data-i18n="form_submit">Send order on WhatsApp</button>
         <p id="formStatus" class="form-status" hidden></p>
       </form>
-      <div id="aiResult" class="ai-result" hidden>
-        <p><strong data-i18n="result_detected"></strong>: <span id="detectedLang"></span></p>
-        <div class="ai-block">
-          <h4 data-i18n="result_translation"></h4>
-          <p id="translationOut"></p>
-        </div>
-        <div class="ai-block">
-          <h4 data-i18n="result_reply"></h4>
-          <p id="replyOut"></p>
-          <div class="ai-actions">
-            <button type="button" class="btn btn-ghost btn-sm" id="copyReply" data-i18n="result_copy">Copy</button>
-            <a class="btn btn-amber btn-sm" id="mailtoLink" href="#" data-i18n="result_mailto">Email</a>
-          </div>
-        </div>
-      </div>
     </section>
   </main>
 

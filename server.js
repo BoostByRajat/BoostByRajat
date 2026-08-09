@@ -43,14 +43,85 @@ app.post('/api/enquiry', async (req, res) => {
       vendorLang,
       clientMeta: { name, email, phone, service, uiLang: lang },
     });
+    const replyDraft =
+      typeof result.replyDraft === 'string'
+        ? result.replyDraft
+        : result.replyDraft
+          ? JSON.stringify(result.replyDraft)
+          : '';
     res.json({
       ok: true,
       ...result,
-      mailto: buildMailto({ name, email, phone, service, message, result }),
+      replyDraft,
+      mailto: buildMailto({
+        name,
+        email,
+        phone,
+        service,
+        message,
+        result: { ...result, replyDraft },
+      }),
     });
   } catch (err) {
     console.error('enquiry error', err);
     res.status(500).json({ error: err.message || 'AI failed' });
+  }
+});
+
+app.post('/api/order', (req, res) => {
+  try {
+    const body = req.body || {};
+    const name = String(body.name || '').trim();
+    const email = String(body.email || '').trim().toLowerCase();
+    const phone = String(body.phone || '').replace(/\D/g, '');
+    const service = String(body.service || 'other').slice(0, 40);
+    const message = String(body.message || '').trim();
+
+    if (!name) return res.status(400).json({ error: 'Name required' });
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ error: 'Valid email required' });
+    }
+    if (phone.length < 10) {
+      return res.status(400).json({ error: 'Valid WhatsApp / phone required' });
+    }
+    if (message.length < 2) {
+      return res.status(400).json({ error: 'Project details required' });
+    }
+
+    const lead = addLead({
+      id: `order_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      createdAt: new Date().toISOString(),
+      name,
+      email,
+      whatsapp: phone,
+      location: null,
+      interest: [service],
+      message,
+      service,
+      consent: true,
+      source: 'order',
+    });
+
+    const vendorWa = String(process.env.WHATSAPP_NUMBER || process.env.VITE_WHATSAPP_NUMBER || '918696666063').replace(
+      /\D/g,
+      ''
+    );
+    const text = [
+      'New order from BoostByRajat site',
+      `Name: ${name}`,
+      `Email: ${email}`,
+      `WhatsApp: ${phone}`,
+      `Service: ${service}`,
+      '',
+      message,
+    ].join('\n');
+    const whatsappUrl = `https://wa.me/${vendorWa}?text=${encodeURIComponent(text)}`;
+
+    console.log('New order:', lead.email, lead.service);
+    res.json({ ok: true, id: lead.id, whatsappUrl });
+  } catch (err) {
+    console.error('order error', err);
+    res.status(500).json({ error: err.message || 'Order failed' });
   }
 });
 
