@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Invoice — BoostByRajat</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="icon" href="/brand/logo.png" type="image/png" />
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Great+Vibes&family=Noto+Sans+Devanagari:wght@400;600;700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/src/style.css" />
+  <link rel="stylesheet" href="/src/invoice.css" />
+</head>
+<body class="inv-print-view">
+  <div class="bg-stage no-print" aria-hidden="true">
+    <div class="wash wash-gold"></div>
+    <div class="vignette"></div>
+  </div>
+  <header class="topbar no-print">
+    <a class="brand-lockup" href="/">
+      <img src="/brand/logo.png" alt="BoostByRajat" class="brand-logo" width="44" height="44" />
+      <span class="brand-text">Boost<span>By</span>Rajat</span>
+    </a>
+  </header>
+  <main class="view-wrap">
+    <div class="view-actions no-print">
+      <button type="button" class="btn btn-amber btn-sm" id="pdfBtn">Download PDF</button>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="window.print()">Print</button>
+      <a class="btn btn-wa btn-sm" id="waBtn" href="#" target="_blank" rel="noopener">WhatsApp BoostByRajat</a>
+    </div>
+    <p id="viewStatus" class="form-status no-print">Invoice khul rahi hai…</p>
+    <div class="sheet-zoom" id="sheetZoom" hidden>
+      <article class="sheet" id="sheet"></article>
+    </div>
+  </main>
+  <script type="module" src="/src/invoice-view.js"></script>
+</body>
+</html>

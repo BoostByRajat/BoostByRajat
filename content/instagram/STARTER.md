@@ -7,7 +7,7 @@
 3. Category: **Software Company** / **Digital creator** / **Business service**
 4. Contact: WhatsApp `+91 8696666063` + email `rajatbissa16@gmail.com`
 5. Profile photo: `D:\BoostByRajat\public\brand\logo.png` (square crop)
-6. Website link: `https://boostbyrajat.onrender.com/`
+6. Website link: `https://www.boostbyrajat.co.in/`
 
 ### Username (locked)
 `BoostByRajat` → https://instagram.com/BoostByRajat
@@ -118,7 +118,7 @@ AI translate + reply in your language.
 
 Based in India. Clients welcome globally.
 
-https://boostbyrajat.onrender.com
+https://www.boostbyrajat.co.in
 
 #MadeInIndia #GlobalFreelance #WhatsAppBusiness
 ```

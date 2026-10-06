@@ -1,0 +1,79 @@
+import html2canvas from 'html2canvas';
+import { PDFDocument } from 'pdf-lib';
+
+async function canvasToPng(canvas) {
+  const blob = await new Promise((resolve, reject) => {
+    canvas.toBlob((file) => (file ? resolve(file) : reject(new Error('Could not build PDF image'))), 'image/png');
+  });
+  return new Uint8Array(await blob.arrayBuffer());
+}
+
+export async function elementToPdfFile(element, filename) {
+  if (document.fonts?.ready) await document.fonts.ready;
+  const canvas = await html2canvas(element, {
+    scale: 2,
+    backgroundColor: '#ffffff',
+    useCORS: true,
+    logging: false,
+    width: 794,
+    windowWidth: 794,
+    onclone(doc) {
+      const sheet = doc.getElementById('sheet');
+      if (!sheet) return;
+      sheet.style.transform = 'none';
+      sheet.style.margin = '0';
+    },
+  });
+  if (!canvas.width || canvas.height < 20) throw new Error('Invoice preview was blank');
+
+  const pdfDoc = await PDFDocument.create();
+  pdfDoc.setTitle(filename.replace(/\.pdf$/i, ''));
+  pdfDoc.setAuthor('BoostByRajat');
+  pdfDoc.setCreator('BoostByRajat Invoice Desk');
+
+  const pageW = 595.28;
+  const pageH = 841.89;
+  const idealPx = Math.max(1, Math.floor((canvas.width * pageH) / pageW));
+
+  for (let y = 0; y < canvas.height; ) {
+    const remaining = canvas.height - y;
+    const hPx = remaining <= idealPx + 12 ? remaining : idealPx;
+    const slice = document.createElement('canvas');
+    slice.width = canvas.width;
+    slice.height = hPx;
+    const ctx = slice.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, slice.width, slice.height);
+    ctx.drawImage(canvas, 0, y, canvas.width, hPx, 0, 0, canvas.width, hPx);
+    const image = await pdfDoc.embedPng(await canvasToPng(slice));
+    const page = pdfDoc.addPage([pageW, pageH]);
+    const drawH = (hPx / canvas.width) * pageW;
+    const fittedH = Math.min(pageH, drawH);
+    page.drawImage(image, { x: 0, y: pageH - fittedH, width: pageW, height: fittedH });
+    y += hPx;
+  }
+
+  const bytes = await pdfDoc.save();
+  return new File([bytes], filename, { type: 'application/pdf' });
+}
+
+export function downloadFile(file) {
+  const url = URL.createObjectURL(file);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = file.name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+
+export async function fileToBase64(file) {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  let binary = '';
+  const size = 0x8000;
+  for (let i = 0; i < bytes.length; i += size) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + size));
+  }
+  return btoa(binary);
+}

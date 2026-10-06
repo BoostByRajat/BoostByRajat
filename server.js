@@ -6,15 +6,34 @@ import { fileURLToPath } from 'url';
 import { createServer as createViteServer } from 'vite';
 import { translateAndReply, detectOnly, siteAssistantReply } from './server/ai.js';
 import { addLead, readLeads } from './server/leads.js';
+import { deleteInvoice, findById, findByToken, InvoiceError, markCleared, readInvoices, recordSend, saveInvoice } from './server/invoices.js';
+import { listClients, upsertClient } from './server/clients.js';
+import { sendInvoiceEmail, smtpReady } from './server/invoice-mail.js';
+import { clearNoticeText, computeTotals, dueNoticeText, emailSubject, messageText, nextNumber, orderConfirmationText } from './src/invoice-model.js';
+import { site } from './src/config.js';
+import { sendNoticeOnWhatsApp, sendOrderOnWhatsApp, waSnapshot } from './server/wa-api.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 5173;
 const isProd =
   process.env.NODE_ENV === 'production' || process.argv.includes('--prod');
 
+const siteOrigin = String(process.env.PUBLIC_SITE_URL || site.url).replace(/\/$/, '');
+
 const app = express();
 app.use(cors());
-app.use(express.json({ limit: '1mb' }));
+app.use(express.json({ limit: '8mb' }));
+
+app.use((req, res, next) => {
+  if (!isProd) return next();
+  const host = String(req.get('x-forwarded-host') || req.get('host') || '')
+    .split(',')[0]
+    .trim()
+    .toLowerCase()
+    .replace(/:\d+$/, '');
+  if (!host.endsWith('.onrender.com') || req.path.startsWith('/api/')) return next();
+  res.redirect(301, new URL(req.originalUrl, `${siteOrigin}/`).toString());
+});
 
 function deskPasswordOk(password) {
   const expected = process.env.VENDOR_DESK_PASSWORD || 'change-me';
@@ -234,6 +253,214 @@ app.post('/api/leads/list', (req, res) => {
   }
 });
 
+app.post('/api/invoices/login', (req, res) => {
+  if (!deskPasswordOk(req.body?.password)) {
+    return res.status(401).json({ error: 'Galat password' });
+  }
+  res.json({ ok: true });
+});
+
+app.post('/api/invoices/list', (req, res) => {
+  try {
+    if (!deskPasswordOk(req.body?.password)) {
+      return res.status(401).json({ error: 'Wrong password' });
+    }
+    const invoices = readInvoices().sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)));
+    res.json({
+      ok: true,
+      invoices,
+      clients: listClients(),
+      nextNumber: nextNumber(invoices),
+      defaultUpi: process.env.INVOICE_UPI || '',
+      smtp: smtpReady(),
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'List failed' });
+  }
+});
+
+app.post('/api/invoices/wa-status', (req, res) => {
+  if (!deskPasswordOk(req.body?.password)) {
+    return res.status(401).json({ error: 'Wrong password' });
+  }
+  res.json({ ok: true, ...waSnapshot() });
+});
+
+app.post('/api/invoices/whatsapp', async (req, res) => {
+  try {
+    if (!deskPasswordOk(req.body?.password)) {
+      return res.status(401).json({ error: 'Wrong password' });
+    }
+    const inv = findById(String(req.body?.id || ''));
+    if (!inv) return res.status(404).json({ error: 'Invoice not found' });
+    const already = (inv.sends || []).some((row) => row.channel === 'whatsapp');
+    if (already && !req.body?.force) {
+      return res.json({ ok: true, sent: false, already: true, invoice: inv });
+    }
+    const wa = waSnapshot();
+    if (wa.status !== 'open') {
+      return res.json({
+        ok: true,
+        sent: false,
+        error: wa.error,
+      });
+    }
+
+    let pdfBuffer = null;
+    const rawPdf = String(req.body?.pdfBase64 || '');
+    if (rawPdf) {
+      let b64 = rawPdf;
+      const comma = b64.indexOf(',');
+      if (b64.startsWith('data:') && comma !== -1) b64 = b64.slice(comma + 1);
+      b64 = b64.replace(/\s/g, '');
+      pdfBuffer = Buffer.from(b64, 'base64');
+      if (pdfBuffer.length < 100 || pdfBuffer.length > 6_000_000 || pdfBuffer.subarray(0, 4).toString() !== '%PDF') {
+        return res.status(400).json({ error: 'PDF missing' });
+      }
+    }
+
+    const filename = String(req.body?.filename || `BoostByRajat-${inv.number}.pdf`)
+      .replace(/[^\w.-]+/g, '-')
+      .slice(0, 80);
+    const link = invoicePublicUrl(req, inv.token);
+    const safeName = filename.toLowerCase().endsWith('.pdf') ? filename : `${filename}.pdf`;
+    await sendOrderOnWhatsApp({
+      phone: inv.client?.phone,
+      text: orderConfirmationText(inv, link),
+      pdfBuffer,
+      filename: safeName,
+      invoice: inv,
+      link,
+    });
+    const invoice = recordSend(inv.id, 'whatsapp');
+    console.log('WhatsApp order confirmation', invoice.number);
+    res.json({ ok: true, sent: true, invoice });
+  } catch (err) {
+    if (err.code === 'WA_OFFLINE' || err.code === 'WA_PHONE') {
+      return res.json({ ok: true, sent: false, error: err.message });
+    }
+    console.error('invoice whatsapp', err);
+    res.status(500).json({ error: err.message || 'WhatsApp send failed' });
+  }
+});
+
+app.post('/api/invoices/save', (req, res) => {
+  try {
+    if (!deskPasswordOk(req.body?.password)) {
+      return res.status(401).json({ error: 'Wrong password' });
+    }
+    const invoice = saveInvoice(req.body || {});
+    upsertClient(invoice.client);
+    res.json({ ok: true, invoice, clients: listClients() });
+  } catch (err) {
+    const status = err instanceof InvoiceError ? err.status : 500;
+    if (!(err instanceof InvoiceError)) console.error('invoice save', err);
+    res.status(status).json({ error: err.message || 'Save failed' });
+  }
+});
+
+app.post('/api/invoices/notice', async (req, res) => {
+  try {
+    if (!deskPasswordOk(req.body?.password)) {
+      return res.status(401).json({ error: 'Wrong password' });
+    }
+    const kind = req.body?.kind === 'clear' ? 'clear' : 'due';
+    let inv = findById(String(req.body?.id || ''));
+    if (!inv) return res.status(404).json({ error: 'Invoice not found' });
+    if (!inv.client?.phone) return res.status(400).json({ error: 'Client ka WhatsApp number likho' });
+    if (kind === 'due' && computeTotals(inv).pending <= 0) {
+      return res.status(400).json({ error: 'Is bill par pending nahi hai' });
+    }
+    if (kind === 'clear') inv = markCleared(inv.id);
+    const link = invoicePublicUrl(req, inv.token);
+    const text = kind === 'due' ? dueNoticeText(inv, link) : clearNoticeText(inv, link);
+    const wa = waSnapshot();
+    if (wa.status !== 'open') {
+      return res.json({ ok: true, sent: false, invoice: inv, error: wa.error });
+    }
+    await sendNoticeOnWhatsApp({ phone: inv.client?.phone, text });
+    const invoice = recordSend(inv.id, kind);
+    console.log('WhatsApp notice', kind, invoice.number);
+    res.json({ ok: true, sent: true, invoice });
+  } catch (err) {
+    if (err.code === 'WA_OFFLINE' || err.code === 'WA_PHONE') {
+      const inv = findById(String(req.body?.id || ''));
+      return res.json({ ok: true, sent: false, invoice: inv, error: err.message });
+    }
+    const status = err instanceof InvoiceError ? err.status : 500;
+    if (status === 500) console.error('invoice notice', err);
+    res.status(status).json({ error: err.message || 'Message failed' });
+  }
+});
+
+app.post('/api/invoices/delete', (req, res) => {
+  try {
+    if (!deskPasswordOk(req.body?.password)) {
+      return res.status(401).json({ error: 'Wrong password' });
+    }
+    deleteInvoice(String(req.body?.id || ''));
+    res.json({ ok: true });
+  } catch (err) {
+    const status = err instanceof InvoiceError ? err.status : 500;
+    res.status(status).json({ error: err.message || 'Delete failed' });
+  }
+});
+
+app.get('/api/invoices/public/:token', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  const found = findByToken(req.params.token);
+  if (!found) return res.status(404).json({ error: 'Invoice not found' });
+  const invoice = { ...found };
+  delete invoice.sends;
+  res.json({ ok: true, invoice });
+});
+
+app.post('/api/invoices/email', async (req, res) => {
+  try {
+    if (!deskPasswordOk(req.body?.password)) {
+      return res.status(401).json({ error: 'Wrong password' });
+    }
+    const inv = findById(String(req.body?.id || ''));
+    if (!inv) return res.status(404).json({ error: 'Invoice not found' });
+    if (!inv.client?.email) return res.status(400).json({ error: 'Client email missing' });
+
+    let b64 = String(req.body?.pdfBase64 || '');
+    const comma = b64.indexOf(',');
+    if (b64.startsWith('data:') && comma !== -1) b64 = b64.slice(comma + 1);
+    b64 = b64.replace(/\s/g, '');
+    const pdfBuffer = Buffer.from(b64, 'base64');
+    if (pdfBuffer.length < 100 || pdfBuffer.length > 6_000_000 || pdfBuffer.subarray(0, 4).toString() !== '%PDF') {
+      return res.status(400).json({ error: 'PDF missing' });
+    }
+
+    const filename = String(req.body?.filename || `BoostByRajat-${inv.number}.pdf`)
+      .replace(/[^\w.-]+/g, '-')
+      .slice(0, 80);
+    const link = invoicePublicUrl(req, inv.token);
+    await sendInvoiceEmail({
+      to: inv.client.email,
+      subject: emailSubject(inv),
+      text: messageText(inv, link, { whatsapp: site.whatsapp, email: site.email }),
+      pdfBuffer,
+      filename: filename.toLowerCase().endsWith('.pdf') ? filename : `${filename}.pdf`,
+    });
+    const invoice = recordSend(inv.id, 'email');
+    res.json({ ok: true, sent: true, invoice });
+  } catch (err) {
+    if (err.code === 'NO_SMTP') return res.json({ ok: true, sent: false, reason: 'no_smtp' });
+    const status = err instanceof InvoiceError ? err.status : 500;
+    if (status === 500) console.error('invoice email', err);
+    res.status(status).json({ error: err.message || 'Email failed' });
+  }
+});
+
+function invoicePublicUrl(req, token) {
+  if (isProd) return `${siteOrigin}/invoice-view.html?t=${token}`;
+  const proto = req.get('x-forwarded-proto') || req.protocol;
+  const host = req.get('x-forwarded-host') || req.get('host');
+  return `${proto}://${host}/invoice-view.html?t=${token}`;
+}
+
 function buildMailto({ name, email, phone, service, message, result }) {
   const to = process.env.PUBLIC_EMAIL || '';
   const subject = encodeURIComponent(`BoostByRajat enquiry — ${service || 'general'}`);
@@ -273,7 +500,20 @@ async function start() {
     app.get(['/collect', '/collect.html'], (_req, res) => {
       res.sendFile(path.join(dist, 'collect.html'));
     });
+    app.get(['/invoice', '/invoice.html'], (_req, res) => {
+      res.sendFile(path.join(dist, 'invoice.html'));
+    });
+    app.get(['/invoice-view', '/invoice-view.html'], (_req, res) => {
+      res.sendFile(path.join(dist, 'invoice-view.html'));
+    });
   }
+
+  app.use((err, _req, res, next) => {
+    if (err?.type === 'entity.too.large') {
+      return res.status(413).json({ error: 'File too large' });
+    }
+    next(err);
+  });
 
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`BoostByRajat → http://0.0.0.0:${PORT}`);

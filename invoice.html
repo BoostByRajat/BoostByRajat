@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Invoice Desk — BoostByRajat</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="icon" href="/brand/logo.png" type="image/png" />
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Great+Vibes&family=Noto+Sans+Devanagari:wght@400;600;700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/src/style.css" />
+  <link rel="stylesheet" href="/src/invoice.css" />
+</head>
+<body class="inv-desk">
+  <div class="bg-stage" aria-hidden="true">
+    <div class="wash wash-gold"></div>
+    <div class="vignette"></div>
+  </div>
+  <header class="topbar no-print">
+    <a class="brand-lockup" href="/">
+      <img src="/brand/logo.png" alt="BoostByRajat" class="brand-logo" width="44" height="44" />
+      <span class="brand-text">Invoice <span>Desk</span></span>
+    </a>
+    <div class="top-actions">
+      <button type="button" class="btn btn-ghost btn-sm" id="logoutBtn" hidden>Logout</button>
+      <a class="btn btn-ghost btn-sm" href="/desk.html">Translate</a>
+      <a class="btn btn-ghost btn-sm" href="/">Site</a>
+    </div>
+  </header>
+  <main class="inv-app">
+    <section id="loginGate" class="inv-panel login-gate">
+      <h1>Invoice login</h1>
+      <p class="inv-lead">Bina login bill nahi banti. Yeh page khula milne par bhi koi invoice generate nahi kar sakta.</p>
+      <form id="loginForm">
+        <label>Password
+          <input id="password" type="password" name="password" autocomplete="current-password" required />
+        </label>
+        <button class="btn btn-amber" id="loginBtn" type="submit">Login</button>
+        <p id="loginStatus" class="form-status" hidden></p>
+      </form>
+    </section>
+    <div id="desk" hidden>
+    <h1>Invoice banao</h1>
+    <p class="inv-lead">Client, jo kaam doge, advance aur pending. Generate dabate hi order confirmation BBR Send ke WhatsApp API se client ko jayegi. Number link karne ki zarurat nahi.</p>
+    <p class="wa-box no-print" id="waState">WhatsApp API panel Meta approval ke baad message bhejega.</p>
+    <div class="inv-layout">
+      <form id="invForm" class="inv-panel no-print">
+        <div class="grid-2">
+          <label>Invoice no.
+            <input id="number" placeholder="BBR-001" />
+          </label>
+          <label>Status
+            <select id="status">
+              <option value="draft">Draft</option>
+              <option value="sent">Sent</option>
+              <option value="partial">Partial</option>
+              <option value="paid">Paid</option>
+            </select>
+          </label>
+          <label>Date<input id="date" type="date" required /></label>
+          <label>Due date<input id="due" type="date" /></label>
+        </div>
+        <label>Saved client
+          <select id="clientPick">
+            <option value="">Naya client</option>
+          </select>
+        </label>
+        <div class="grid-2">
+          <label>Client ka naam<input id="clientName" required placeholder="Rahul Sharma" /></label>
+          <label>Business<input id="business" placeholder="Shop / brand" /></label>
+          <label>WhatsApp<input id="phone" inputmode="tel" placeholder="98xxxxxxxx" /></label>
+          <label>Email<input id="email" type="email" placeholder="client@email.com" /></label>
+        </div>
+        <label>City<input id="city" placeholder="Jaipur" /></label>
+
+        <h2>Kaam aur amount</h2>
+        <div id="presets" class="presets"></div>
+        <div id="items"></div>
+        <button type="button" class="btn btn-ghost btn-sm" id="addItem">+ Line</button>
+
+        <h2>Client ko kya milega</h2>
+        <p class="muted">Yeh invoice par “What you get” mein dikhega. Price alag, delivery alag.</p>
+        <div id="deliverables"></div>
+        <button type="button" class="btn btn-ghost btn-sm" id="addDel">+ Deliverable</button>
+
+        <label class="check"><input id="gstOn" type="checkbox" /> GST lagana hai</label>
+        <div id="gstFields" class="grid-2" hidden>
+          <label>GST %<input id="gstPercent" type="number" min="0" max="100" step="0.01" value="18" /></label>
+          <label>GSTIN<input id="gstin" placeholder="Optional" /></label>
+        </div>
+
+        <h2>Advance aur pending</h2>
+        <label>Advance mila (₹)
+          <input id="advance" type="number" min="0" step="1" value="0" />
+        </label>
+        <div class="adv-quick">
+          <button type="button" class="btn btn-ghost btn-sm" id="adv40">40%</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="adv50">50%</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="adv100">Full</button>
+        </div>
+        <div class="money-box">
+          <div><span>Subtotal</span><strong id="mSub">₹0.00</strong></div>
+          <div id="mGstRow" hidden><span>GST</span><strong id="mGst">₹0.00</strong></div>
+          <div><span>Total</span><strong id="mTot">₹0.00</strong></div>
+          <div><span>Advance</span><strong id="mAdv">₹0.00</strong></div>
+          <div class="pending-line" id="mPending"><span>Pending</span><strong id="mPen">₹0.00</strong></div>
+        </div>
+        <label>UPI ID<input id="upi" placeholder="name@upi" /></label>
+        <label>Note<textarea id="notes" maxlength="2000"></textarea></label>
+        <div class="inv-actions">
+          <button class="btn btn-amber btn-sm" id="saveBtn" type="submit">Generate</button>
+          <button class="btn btn-ghost btn-sm" id="pdfBtn" type="button">PDF</button>
+          <button class="btn btn-wa btn-sm" id="waBtn" type="button">Send again</button>
+          <button class="btn btn-mail btn-sm" id="mailBtn" type="button">Email</button>
+          <button class="btn btn-ghost btn-sm" id="copyBtn" type="button">Copy message</button>
+          <button class="btn btn-ghost btn-sm" id="dueBtn" type="button">Due message</button>
+          <button class="btn btn-ghost btn-sm" id="clearBtn" type="button">Clear message</button>
+          <button class="btn btn-ghost btn-sm" id="newBtn" type="button">New</button>
+        </div>
+        <p id="invStatus" class="form-status" hidden></p>
+        <a id="openLink" class="inv-link" href="#" target="_blank" rel="noopener" hidden>Client link</a>
+        <p id="smtpHint" class="muted"></p>
+      </form>
+      <aside class="inv-side">
+        <h2 class="no-print">Preview</h2>
+        <div class="sheet-zoom" id="sheetZoom">
+          <article class="sheet" id="sheet"></article>
+        </div>
+      </aside>
+    </div>
+    <section class="inv-list no-print" id="accounts">
+      <div class="acct-head">
+        <button type="button" class="btn btn-ghost btn-sm" id="acctPrev" aria-label="Pichla mahina">←</button>
+        <h2 id="acctMonth">Is mahine</h2>
+        <button type="button" class="btn btn-ghost btn-sm" id="acctNext" aria-label="Agla mahina">→</button>
+      </div>
+      <div class="acct-grid">
+        <article class="acct-card"><span>Is mahine mila</span><strong id="acctEarning">₹0.00</strong></article>
+        <article class="acct-card acct-due"><span>Is mahine pending</span><strong id="acctPending">₹0.00</strong></article>
+        <article class="acct-card"><span>Bills</span><strong id="acctBills">0</strong></article>
+      </div>
+      <p class="muted" id="acctAllPending"></p>
+      <h2>Date wise</h2>
+      <div id="acctDays" class="day-list"></div>
+    </section>
+    <section class="inv-list no-print">
+      <div class="acct-head">
+        <h2>Bill history</h2>
+        <div class="adv-quick">
+          <button type="button" class="btn btn-ghost btn-sm" id="histMonth" aria-pressed="true">Is mahine</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="histAll" aria-pressed="false">Saari</button>
+        </div>
+      </div>
+      <button type="button" class="btn btn-ghost btn-sm" id="loadBtn">Refresh</button>
+      <div id="invList" class="inv-cards"></div>
+    </section>
+    </div>
+  </main>
+  <script type="module" src="/src/invoice.js"></script>
+</body>
+</html>

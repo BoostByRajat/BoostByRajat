@@ -1,4 +1,7 @@
 import { site } from './config.js';
+import { initAnalytics } from './analytics.js';
+
+initAnalytics();
 
 export function waNumber() {
   return (

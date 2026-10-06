@@ -1,6 +1,7 @@
 export const site = {
   brand: 'BoostByRajat',
   short: 'BBR',
+  url: 'https://www.boostbyrajat.co.in',
   tagline: 'Apps, websites, Instagram & ads — built and boosted by one maker.',
   whatsapp: '918696666063',
   email: 'rajatbissa16@gmail.com',
