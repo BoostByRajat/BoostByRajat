@@ -1,0 +1,14 @@
+{
+  "appId": "com.boostbyrajat.invoice",
+  "appName": "BBR Invoice",
+  "webDir": "mobile-www",
+  "server": {
+    "url": "https://www.boostbyrajat.co.in/invoice.html",
+    "cleartext": false,
+    "androidScheme": "https",
+    "allowNavigation": [
+      "www.boostbyrajat.co.in",
+      "boostbyrajat.co.in"
+    ]
+  }
+}

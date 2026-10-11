@@ -21,6 +21,7 @@
       <span class="brand-text">Invoice <span>Desk</span></span>
     </a>
     <div class="top-actions">
+      <span id="whoami" class="who-name" hidden></span>
       <button type="button" class="btn btn-ghost btn-sm" id="logoutBtn" hidden>Logout</button>
       <a class="btn btn-ghost btn-sm" href="/desk.html">Translate</a>
       <a class="btn btn-ghost btn-sm" href="/">Site</a>
@@ -28,28 +29,40 @@
   </header>
   <main class="inv-app">
     <section id="loginGate" class="inv-panel login-gate">
-      <h1>Invoice login</h1>
-      <p class="inv-lead">Bina login bill nahi banti. Yeh page khula milne par bhi koi invoice generate nahi kar sakta.</p>
-      <form id="loginForm">
+      <div class="login-brand">
+        <img src="/brand/logo.png" alt="" width="44" height="44" />
+        <p class="login-kicker">BoostByRajat</p>
+      </div>
+      <h1>Invoice Desk</h1>
+      <p class="inv-lead">Sign in with your staff account to prepare invoices and quotations.</p>
+      <form id="loginForm" class="login-form">
+        <label>Username
+          <input id="username" name="username" autocomplete="username" required />
+        </label>
         <label>Password
           <input id="password" type="password" name="password" autocomplete="current-password" required />
         </label>
-        <button class="btn btn-amber" id="loginBtn" type="submit">Login</button>
+        <button class="btn btn-amber" id="loginBtn" type="submit">Sign in</button>
         <p id="loginStatus" class="form-status" hidden></p>
       </form>
     </section>
     <div id="desk" hidden>
     <h1>Invoice banao</h1>
-    <p class="inv-lead">Client, jo kaam doge, advance aur pending. Generate dabate hi order confirmation BBR Send ke WhatsApp API se client ko jayegi. Number link karne ki zarurat nahi.</p>
+    <p class="inv-lead">Invoice, quotation, ya demo. Asli invoice ki confirmation WhatsApp se jaati hai. Demo number aur earning mein nahi aata. Quotation promotion list mein save hoti hai.</p>
     <p class="wa-box no-print" id="waState">WhatsApp API panel Meta approval ke baad message bhejega.</p>
     <div class="inv-layout">
       <form id="invForm" class="inv-panel no-print">
+        <div class="adv-quick" id="kindPick">
+          <button type="button" class="btn btn-ghost btn-sm" id="kindInvoice" data-kind="invoice" aria-pressed="true">Invoice</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="kindQuote" data-kind="quote" aria-pressed="false">Quotation</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="kindDemo" data-kind="demo" aria-pressed="false">Demo bill</button>
+        </div>
         <div class="grid-2">
           <label>Invoice no.
             <input id="number" placeholder="BBR-001" />
           </label>
           <label>Status
-            <select id="status">
+            <select id="status" disabled>
               <option value="draft">Draft</option>
               <option value="sent">Sent</option>
               <option value="partial">Partial</option>
@@ -57,7 +70,7 @@
             </select>
           </label>
           <label>Date<input id="date" type="date" required /></label>
-          <label>Due date<input id="due" type="date" /></label>
+          <label><span id="dueLabel">Due date</span><input id="due" type="date" /></label>
         </div>
         <label>Saved client
           <select id="clientPick">
@@ -88,14 +101,16 @@
           <label>GSTIN<input id="gstin" placeholder="Optional" /></label>
         </div>
 
-        <h2>Advance aur pending</h2>
-        <label>Advance mila (₹)
-          <input id="advance" type="number" min="0" step="1" value="0" />
-        </label>
+        <div id="payBlock">
+        <h2>Payments</h2>
+        <p class="muted" id="payHint">Jo amount mil chuka hai. Pending total minus in payments.</p>
+        <div id="payments"></div>
+        <button type="button" class="btn btn-ghost btn-sm" id="addPay">+ Payment</button>
         <div class="adv-quick">
           <button type="button" class="btn btn-ghost btn-sm" id="adv40">40%</button>
           <button type="button" class="btn btn-ghost btn-sm" id="adv50">50%</button>
           <button type="button" class="btn btn-ghost btn-sm" id="adv100">Full</button>
+        </div>
         </div>
         <div class="money-box">
           <div><span>Subtotal</span><strong id="mSub">₹0.00</strong></div>
@@ -114,6 +129,7 @@
           <button class="btn btn-ghost btn-sm" id="copyBtn" type="button">Copy message</button>
           <button class="btn btn-ghost btn-sm" id="dueBtn" type="button">Due message</button>
           <button class="btn btn-ghost btn-sm" id="clearBtn" type="button">Clear message</button>
+          <button class="btn btn-ghost btn-sm" id="convertBtn" type="button" hidden>Invoice banao</button>
           <button class="btn btn-ghost btn-sm" id="newBtn" type="button">New</button>
         </div>
         <p id="invStatus" class="form-status" hidden></p>
@@ -152,6 +168,18 @@
       </div>
       <button type="button" class="btn btn-ghost btn-sm" id="loadBtn">Refresh</button>
       <div id="invList" class="inv-cards"></div>
+    </section>
+    <section class="inv-list no-print" id="members" hidden>
+      <h2>Admin members</h2>
+      <p class="muted">Bill par “Prepared by” isi naam se aata hai. Sirf owner naya member jod sakta hai.</p>
+      <form id="memberForm" class="grid-2">
+        <label>Username<input id="memUser" autocomplete="off" required minlength="3" /></label>
+        <label>Display name<input id="memName" autocomplete="off" required minlength="2" /></label>
+        <label>Password<input id="memPass" type="password" autocomplete="new-password" required minlength="6" /></label>
+        <button class="btn btn-amber btn-sm" type="submit">Add member</button>
+      </form>
+      <p id="memStatus" class="form-status" hidden></p>
+      <div id="memberList" class="inv-cards"></div>
     </section>
     </div>
   </main>

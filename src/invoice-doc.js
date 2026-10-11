@@ -1,10 +1,12 @@
 import { site } from './config.js';
 import {
   computeTotals,
+  docKind,
   formatDate,
   formatInr,
   formatPhone,
   lineAmount,
+  paymentsOf,
 } from './invoice-model.js';
 
 function esc(value) {
@@ -23,12 +25,24 @@ const STATUS = {
 };
 
 export function paintSheet(sheet, inv, opts = {}) {
+  const kind = docKind(inv);
   const totals = computeTotals(inv);
   const items = (inv.items || []).filter((item) => String(item.description || '').trim());
   const deliverables = (inv.deliverables || []).map((line) => String(line || '').trim()).filter(Boolean);
+  const payments = paymentsOf(inv);
   const phone = formatPhone(inv.client?.phone);
   const vendorPhone = formatPhone(site.whatsapp);
-  const pendingClear = totals.pending <= 0 && !totals.advanceOverflow;
+  const pendingClear = kind !== 'quote' && totals.pending <= 0 && !totals.advanceOverflow;
+  const kicker = kind === 'quote' ? 'Quotation' : kind === 'demo' ? 'Demo' : 'Invoice';
+  const dueLabel = kind === 'quote' ? 'Valid' : 'Due';
+  const prepared = inv.createdBy?.name || 'Rajat';
+  const foot = kind === 'quote'
+    ? 'Estimate only. Work starts after you confirm.'
+    : kind === 'demo'
+      ? 'Demo bill. Not a real charge.'
+      : 'Advance starts the work. Balance before final delivery.';
+  sheet.classList.toggle('sheet-demo', kind === 'demo');
+  sheet.classList.toggle('sheet-quote', kind === 'quote');
   const rows = items
     .map(
       (item) => `<tr>
@@ -54,7 +68,7 @@ export function paintSheet(sheet, inv, opts = {}) {
         </div>
       </div>
       <div class="sheet-id">
-        <p class="sheet-kicker">Invoice</p>
+        <p class="sheet-kicker">${esc(kicker)}</p>
         <p class="sheet-no">${esc(inv.number || 'Draft')}</p>
         <p class="sheet-status">${esc(STATUS[inv.status] || 'Draft')}</p>
       </div>
@@ -70,7 +84,7 @@ export function paintSheet(sheet, inv, opts = {}) {
       </div>
       <div class="sheet-dates">
         <p><span>Date</span><strong>${esc(formatDate(inv.date))}</strong></p>
-        <p><span>Due</span><strong>${esc(formatDate(inv.dueDate))}</strong></p>
+        <p><span>${esc(dueLabel)}</span><strong>${esc(formatDate(inv.dueDate))}</strong></p>
         ${inv.gstin ? `<p><span>GSTIN</span><strong>${esc(inv.gstin)}</strong></p>` : ''}
       </div>
     </div>
@@ -93,6 +107,16 @@ export function paintSheet(sheet, inv, opts = {}) {
       <div class="sheet-pay">
         <p class="sheet-label">Payment</p>
         ${inv.upi ? `<p>UPI: <strong>${esc(inv.upi)}</strong></p>` : '<p>UPI on request</p>'}
+        ${
+          payments.length
+            ? `<div class="sheet-paylist">${payments
+                .map(
+                  (row) =>
+                    `<p>${esc(formatDate(row.date))} · ${esc(row.note || 'Payment')} · <strong>${esc(formatInr(row.amount))}</strong></p>`,
+                )
+                .join('')}</div>`
+            : ''
+        }
         <p>${esc(vendorPhone)}</p>
         <p>${esc(site.email)}</p>
       </div>
@@ -100,24 +124,26 @@ export function paintSheet(sheet, inv, opts = {}) {
         <div><span>Subtotal</span><strong>${esc(formatInr(totals.subtotal))}</strong></div>
         ${gstRow}
         <div><span>Total</span><strong>${esc(formatInr(totals.total))}</strong></div>
-        <div><span>Advance received</span><strong>${esc(formatInr(Math.max(0, totals.advance)))}</strong></div>
+        <div><span>${kind === 'quote' ? 'Received' : 'Advance received'}</span><strong>${esc(formatInr(Math.max(0, totals.advance)))}</strong></div>
         <div class="sheet-pending${pendingClear ? ' cleared' : ''}">
-          <span>${pendingClear ? 'Paid in full' : 'Pending'}</span>
+          <span>${pendingClear ? 'Paid in full' : kind === 'quote' ? 'Estimate' : 'Pending'}</span>
           <strong>${esc(formatInr(Math.max(0, totals.pending)))}</strong>
         </div>
       </div>
     </div>
+    ${kind === 'quote' ? '<p class="sheet-estimate">This is an estimate, not a tax invoice.</p>' : ''}
     ${inv.notes ? `<p class="sheet-note">${esc(inv.notes)}</p>` : ''}
     <div class="sheet-sign">
       <div class="sheet-sign-block">
-        <p class="sheet-sign-name">Rajat</p>
-        <p class="sheet-sign-role">Founder</p>
+        <p class="sheet-sign-role">Prepared by</p>
+        <p class="sheet-sign-name">${esc(prepared)}</p>
         <p class="sheet-sign-brand">${esc(site.brand)}</p>
       </div>
     </div>
+    ${kind === 'demo' ? '<p class="sheet-watermark">DEMO</p>' : ''}
     <footer class="sheet-foot">
       <span>${esc(site.brand)}</span>
-      <span>Advance starts the work. Balance before final delivery.</span>
+      <span>${esc(foot)}</span>
     </footer>
   `;
 }

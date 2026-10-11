@@ -7,7 +7,9 @@
     "dev": "node server.js",
     "build": "vite build",
     "start": "node server.js --prod",
-    "preview": "npm run build && npm start"
+    "preview": "npm run build && npm start",
+    "android:sync": "cap sync android",
+    "android:debug": "cap sync android && cd android && gradlew.bat assembleDebug"
   },
   "dependencies": {
     "cors": "^2.8.5",
@@ -17,5 +19,10 @@
     "nodemailer": "^10.0.15",
     "pdf-lib": "^1.17.1",
     "vite": "^6.2.0"
+  },
+  "devDependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/cli": "^8.5.3",
+    "@capacitor/core": "^8.5.3"
   }
 }

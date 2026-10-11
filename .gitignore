@@ -6,4 +6,5 @@ dist/
 data/leads.json
 data/invoices.json
 data/clients.json
+data/admins.json
 data/wa-auth/

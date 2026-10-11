@@ -47,7 +47,8 @@
     <h1>AI Translate Desk</h1>
     <p style="color:#a9b0c0">Paste any WhatsApp / email message. Get Hindi/English meaning + reply draft in their language.</p>
     <form id="deskForm" class="desk-panel">
-      <label>Desk password<input type="password" name="password" required autocomplete="current-password" /></label>
+      <label>Username<input name="username" required autocomplete="username" placeholder="rajat" /></label>
+      <label>Password<input type="password" name="password" required autocomplete="current-password" /></label>
       <label>Client message<textarea name="text" rows="7" required placeholder="Paste message here…"></textarea></label>
       <button class="btn btn-amber" type="submit">Translate + draft reply</button>
       <p id="deskStatus" class="form-status" hidden></p>
@@ -64,7 +65,7 @@
 
     <section class="leads-box page-card" style="margin-top:2rem">
       <h2 style="margin:0">Leads / offers list</h2>
-      <p style="color:var(--muted);margin:0">Same desk password. Export for ads audiences. Re-deploy may reset file storage on free host — copy often.</p>
+      <p style="color:var(--muted);margin:0">Same login as Invoice Desk. Export for ads audiences. Quotations bhi yahan aati hain. Re-deploy may reset file storage on free host — copy often.</p>
       <button type="button" class="btn btn-ghost btn-sm" id="loadLeads">Load leads</button>
       <button type="button" class="btn btn-amber btn-sm" id="copyLeads">Copy CSV</button>
       <textarea id="leadsOut" readonly placeholder="Leads appear here…"></textarea>

@@ -1,4 +1,4 @@
-import { computeTotals, formatInr, orderConfirmationText, waNumber } from '../src/invoice-model.js';
+import { computeTotals, docKind, formatInr, orderConfirmationText, waNumber } from '../src/invoice-model.js';
 
 const GRAPH = 'https://graph.facebook.com/v21.0';
 
@@ -21,6 +21,8 @@ export function waSnapshot() {
     status: ready ? 'open' : 'off',
     ready,
     document: !template || process.env.WHATSAPP_TEMPLATE_DOCUMENT === '1',
+    quoteTemplate: Boolean(String(process.env.WHATSAPP_QUOTE_TEMPLATE || '').trim()),
+    quoteDocument: process.env.WHATSAPP_QUOTE_TEMPLATE_DOCUMENT === '1',
     error: ready
       ? ''
       : 'WhatsApp API panel Meta approval ke baad chalega. Number link karne ki zarurat nahi.',
@@ -60,8 +62,9 @@ async function uploadPdf(buffer, filename) {
   return data.id;
 }
 
-async function sendTemplate({ to, invoice, link, mediaId, filename }) {
+async function sendTemplate({ to, invoice, link, mediaId, filename, templateName }) {
   const totals = computeTotals(invoice);
+  const name = String(templateName || process.env.WHATSAPP_TEMPLATE || '').trim();
   const components = [];
   if (mediaId) {
     components.push({
@@ -94,7 +97,7 @@ async function sendTemplate({ to, invoice, link, mediaId, filename }) {
       to,
       type: 'template',
       template: {
-        name: String(process.env.WHATSAPP_TEMPLATE).trim(),
+        name,
         language: { code: String(process.env.WHATSAPP_TEMPLATE_LANG || 'en').trim() || 'en' },
         components,
       },
@@ -143,14 +146,19 @@ export async function sendOrderOnWhatsApp({ phone, text, pdfBuffer, filename, in
     err.code = 'WA_PHONE';
     throw err;
   }
-  const template = String(process.env.WHATSAPP_TEMPLATE || '').trim();
-  const wantDocument = !template || process.env.WHATSAPP_TEMPLATE_DOCUMENT === '1';
+  const quote = docKind(invoice) === 'quote';
+  const template = quote
+    ? String(process.env.WHATSAPP_QUOTE_TEMPLATE || '').trim()
+    : String(process.env.WHATSAPP_TEMPLATE || '').trim();
+  const wantDocument = quote
+    ? process.env.WHATSAPP_QUOTE_TEMPLATE_DOCUMENT === '1'
+    : (!template || process.env.WHATSAPP_TEMPLATE_DOCUMENT === '1');
   let mediaId = '';
   if (wantDocument && pdfBuffer && pdfBuffer.length > 100) {
     mediaId = await uploadPdf(pdfBuffer, filename);
   }
   if (template) {
-    await sendTemplate({ to, invoice, link, mediaId, filename });
+    await sendTemplate({ to, invoice, link, mediaId, filename, templateName: template });
     return;
   }
   if (mediaId) {

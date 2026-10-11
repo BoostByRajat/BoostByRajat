@@ -2,8 +2,19 @@ const form = document.getElementById('deskForm');
 const status = document.getElementById('deskStatus');
 const result = document.getElementById('deskResult');
 
-function deskPassword() {
-  return form?.password?.value || '';
+async function deskLogin() {
+  const res = await fetch('/api/auth/login', {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      username: form?.username?.value || '',
+      password: form?.password?.value || '',
+    }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Galat username ya password');
+  return data.user;
 }
 
 form?.addEventListener('submit', async (e) => {
@@ -13,11 +24,12 @@ form?.addEventListener('submit', async (e) => {
   status.textContent = 'Working…';
   result.hidden = true;
   try {
+    await deskLogin();
     const res = await fetch('/api/translate', {
       method: 'POST',
+      credentials: 'same-origin',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        password: fd.get('password'),
         text: fd.get('text'),
       }),
     });
@@ -66,10 +78,12 @@ document.getElementById('loadLeads')?.addEventListener('click', async () => {
   leadsStatus.hidden = false;
   leadsStatus.textContent = 'Loading…';
   try {
+    await deskLogin();
     const res = await fetch('/api/leads/list', {
       method: 'POST',
+      credentials: 'same-origin',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: deskPassword() }),
+      body: JSON.stringify({}),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed');

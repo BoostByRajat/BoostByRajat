@@ -60,6 +60,40 @@ export function lineAmount(item) {
   return round2((Number(item?.qty) || 0) * (Number(item?.rate) || 0));
 }
 
+export function docKind(inv) {
+  if (inv?.kind === 'quote') return 'quote';
+  if (inv?.kind === 'demo') return 'demo';
+  return 'invoice';
+}
+
+export function countsInBooks(inv) {
+  return docKind(inv) === 'invoice';
+}
+
+export function paymentsOf(inv) {
+  if (Array.isArray(inv?.payments)) {
+    return inv.payments
+      .map((row) => ({
+        amount: round2(row?.amount),
+        date: String(row?.date || ''),
+        note: String(row?.note || '').replace(/\s+/g, ' ').trim(),
+      }))
+      .filter((row) => row.amount > 0);
+  }
+  const advance = round2(Number(inv?.advance) || 0);
+  if (advance > 0) {
+    return [{ amount: advance, date: String(inv?.date || ''), note: 'Advance' }];
+  }
+  return [];
+}
+
+export function receivedAmount(inv) {
+  if (Array.isArray(inv?.payments)) {
+    return round2(paymentsOf(inv).reduce((sum, row) => sum + row.amount, 0));
+  }
+  return round2(Number(inv?.advance) || 0);
+}
+
 export function computeTotals(inv) {
   const items = Array.isArray(inv?.items) ? inv.items : [];
   const subtotal = round2(items.reduce((sum, item) => sum + lineAmount(item), 0));
@@ -67,7 +101,7 @@ export function computeTotals(inv) {
   const gstPercent = gstEnabled ? Math.min(100, Math.max(0, Number(inv?.gstPercent) || 0)) : 0;
   const gstAmount = round2((subtotal * gstPercent) / 100);
   const total = round2(subtotal + gstAmount);
-  const advance = round2(Number(inv?.advance) || 0);
+  const advance = receivedAmount(inv);
   const pending = round2(total - advance);
   return {
     subtotal,
@@ -79,6 +113,14 @@ export function computeTotals(inv) {
     pending,
     advanceOverflow: advance - total > 0.009,
   };
+}
+
+export function deriveStatus(inv, totals) {
+  const kind = docKind(inv);
+  if (kind === 'quote') return inv?.status === 'sent' ? 'sent' : 'draft';
+  if (totals.total > 0 && totals.pending <= 0.009) return 'paid';
+  if (totals.advance > 0.009) return 'partial';
+  return inv?.status === 'sent' ? 'sent' : 'draft';
 }
 
 export function formatInr(n) {
@@ -127,13 +169,30 @@ export function waNumber(digits) {
   return '';
 }
 
-export function nextNumber(list) {
+export function nextNumber(list, kind = 'invoice') {
+  const prefix = kind === 'demo' ? 'DEMO' : kind === 'quote' ? 'QT' : 'BBR';
   let max = 0;
   for (const inv of list || []) {
+    if (docKind(inv) !== kind) continue;
     const match = String(inv.number || '').match(/(\d+)\s*$/);
     if (match) max = Math.max(max, Number(match[1]));
   }
-  return `BBR-${String(max + 1).padStart(3, '0')}`;
+  return `${prefix}-${String(max + 1).padStart(3, '0')}`;
+}
+
+export function upiPayUrl(inv) {
+  const pa = String(inv?.upi || '').trim();
+  if (!pa) return '';
+  const due = Math.max(0, computeTotals(inv).pending);
+  if (due <= 0) return '';
+  const params = new URLSearchParams({
+    pa,
+    pn: 'BoostByRajat',
+    am: due.toFixed(2),
+    cu: 'INR',
+    tn: String(inv?.number || 'BoostByRajat').slice(0, 50),
+  });
+  return `upi://pay?${params.toString()}`;
 }
 
 export function pdfFileName(number) {
@@ -141,15 +200,58 @@ export function pdfFileName(number) {
   return `BoostByRajat-${safe}.pdf`;
 }
 
-export function messageText(inv, link, vendor) {
+export function quoteMessageText(inv, link, vendor) {
   const totals = computeTotals(inv);
   const name = inv.client?.name || 'there';
+  const items = (inv.items || []).filter((item) => String(item.description || '').trim());
+  const deliverables = (inv.deliverables || []).map((line) => String(line || '').trim()).filter(Boolean);
+  const lines = [
+    '*Estimate — BoostByRajat*',
+    '',
+    `Namaste ${name},`,
+    'Order se pehle yeh quotation hai. Yeh invoice nahi hai.',
+    `Quotation: *${inv.number || '-'}*`,
+    '',
+    '*Kaam:*',
+    ...items.map((item) => `• ${item.description} — ${formatInr(lineAmount(item))}`),
+    '',
+    '*Aapko yeh milega:*',
+    ...(deliverables.length ? deliverables.map((line) => `• ${line}`) : ['• Detail quotation mein hai']),
+    '',
+    `Estimate total: *${formatInr(totals.total)}*`,
+  ];
+  if (inv.dueDate) lines.push(`Valid till: ${formatDate(inv.dueDate)}`);
+  if (inv.createdBy?.name) lines.push(`Prepared by: ${inv.createdBy.name}`);
+  if (inv.upi) lines.push(`UPI: ${inv.upi}`);
+  if (link) lines.push('', `Quotation: ${link}`);
+  lines.push('', 'Confirm karne par invoice alag se bhejenge.', 'BoostByRajat');
+  if (vendor?.whatsapp) lines.push(formatPhone(vendor.whatsapp));
+  let text = lines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+  if (text.length > 1000) {
+    text = [
+      '*Estimate — BoostByRajat*',
+      `Namaste ${name}, yeh quotation hai, invoice nahi.`,
+      `Quotation *${inv.number || '-'}*`,
+      `Estimate total ${formatInr(totals.total)}`,
+      link ? `Quotation: ${link}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n');
+  }
+  return text;
+}
+
+export function messageText(inv, link, vendor) {
+  if (docKind(inv) === 'quote') return quoteMessageText(inv, link, vendor);
+  const totals = computeTotals(inv);
+  const name = inv.client?.name || 'there';
+  const docLabel = docKind(inv) === 'demo' ? 'demo bill' : 'invoice';
   const items = (inv.items || []).filter((item) => item.description);
   const deliverables = (inv.deliverables || []).map((line) => String(line || '').trim()).filter(Boolean);
   const lines = [
     `Namaste ${name},`,
     '',
-    `BoostByRajat invoice ${inv.number || ''}`.trim(),
+    `BoostByRajat ${docLabel} ${inv.number || ''}`.trim(),
     '',
     'Kaam:',
     ...items.map((item) => `• ${item.description} — ${formatInr(lineAmount(item))}`),
@@ -161,6 +263,8 @@ export function messageText(inv, link, vendor) {
     `Advance: ${formatInr(totals.advance)}`,
     `Pending: ${formatInr(totals.pending)}`,
   ];
+  if (inv.createdBy?.name) lines.push(`Prepared by: ${inv.createdBy.name}`);
+  if (docKind(inv) === 'demo') lines.push('Yeh demo bill hai — asli charge nahi.');
   if (inv.upi) lines.push('', `UPI: ${inv.upi}`);
   if (link) lines.push('', `Invoice / PDF: ${link}`);
   lines.push('', 'BoostByRajat');
@@ -170,7 +274,7 @@ export function messageText(inv, link, vendor) {
   if (text.length > 1500) {
     text = [
       `Namaste ${name},`,
-      `BoostByRajat invoice ${inv.number || ''}`.trim(),
+      `BoostByRajat ${docLabel} ${inv.number || ''}`.trim(),
       `Total ${formatInr(totals.total)} · Advance ${formatInr(totals.advance)} · Pending ${formatInr(totals.pending)}`,
       link ? `Invoice / PDF: ${link}` : '',
       inv.upi ? `UPI: ${inv.upi}` : '',
@@ -182,15 +286,17 @@ export function messageText(inv, link, vendor) {
 }
 
 export function orderConfirmationText(inv, link) {
+  if (docKind(inv) === 'quote') return quoteMessageText(inv, link);
   const totals = computeTotals(inv);
   const name = inv.client?.name || 'there';
+  const demo = docKind(inv) === 'demo';
   const items = (inv.items || []).filter((item) => String(item.description || '').trim());
   const deliverables = (inv.deliverables || []).map((line) => String(line || '').trim()).filter(Boolean);
   const lines = [
-    '*Order confirmed — BoostByRajat*',
+    demo ? '*Demo bill — BoostByRajat*' : '*Order confirmed — BoostByRajat*',
     '',
     `Namaste ${name},`,
-    'Aapka order confirm ho gaya hai.',
+    demo ? 'Yeh demo bill hai. Asli charge nahi hai.' : 'Aapka order confirm ho gaya hai.',
     `Invoice: *${inv.number || '-'}*`,
     '',
     '*Kaam:*',
@@ -203,13 +309,16 @@ export function orderConfirmationText(inv, link) {
     `Advance: *${formatInr(totals.advance)}*`,
     `Pending: *${formatInr(totals.pending)}*`,
   ];
+  if (inv.createdBy?.name) lines.push(`Prepared by: ${inv.createdBy.name}`);
   if (inv.upi) lines.push(`UPI: ${inv.upi}`);
   if (link) lines.push('', `Invoice: ${link}`);
   let text = lines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
   if (text.length > 1000) {
     text = [
-      '*Order confirmed — BoostByRajat*',
-      `Namaste ${name}, aapka order confirm ho gaya hai.`,
+      demo ? '*Demo bill — BoostByRajat*' : '*Order confirmed — BoostByRajat*',
+      demo
+        ? `Namaste ${name}, yeh demo bill hai. Asli charge nahi.`
+        : `Namaste ${name}, aapka order confirm ho gaya hai.`,
       `Invoice *${inv.number || '-'}*`,
       `Total ${formatInr(totals.total)} · Advance ${formatInr(totals.advance)} · Pending ${formatInr(totals.pending)}`,
       link ? `Invoice: ${link}` : '',
@@ -238,7 +347,7 @@ export function monthLabel(key) {
 }
 
 export function accountSummary(invoices, month) {
-  const list = Array.isArray(invoices) ? invoices : [];
+  const list = (Array.isArray(invoices) ? invoices : []).filter(countsInBooks);
   const inMonth = list.filter((inv) => monthKey(inv.date) === month);
   const days = new Map();
   let earning = 0;
@@ -309,6 +418,8 @@ export function clearNoticeText(inv, link) {
 
 export function emailSubject(inv) {
   const totals = computeTotals(inv);
+  if (docKind(inv) === 'quote') return `BoostByRajat quotation ${inv.number || ''}`.trim();
+  if (docKind(inv) === 'demo') return `BoostByRajat demo ${inv.number || ''}`.trim();
   const pending =
     totals.pending <= 0 ? 'paid' : `${formatInr(totals.pending)} pending`;
   return `BoostByRajat invoice ${inv.number || ''} — ${pending}`;

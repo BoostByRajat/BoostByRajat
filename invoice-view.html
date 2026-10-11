@@ -23,10 +23,12 @@
   </header>
   <main class="view-wrap">
     <div class="view-actions no-print">
-      <button type="button" class="btn btn-amber btn-sm" id="pdfBtn">Download PDF</button>
+      <a class="btn btn-amber btn-sm" id="payBtn" href="#" hidden>Pay on UPI</a>
+      <button type="button" class="btn btn-ghost btn-sm" id="pdfBtn">Download PDF</button>
       <button type="button" class="btn btn-ghost btn-sm" onclick="window.print()">Print</button>
       <a class="btn btn-wa btn-sm" id="waBtn" href="#" target="_blank" rel="noopener">WhatsApp BoostByRajat</a>
     </div>
+    <p id="docNote" class="muted no-print" hidden></p>
     <p id="viewStatus" class="form-status no-print">Invoice khul rahi hai…</p>
     <div class="sheet-zoom" id="sheetZoom" hidden>
       <article class="sheet" id="sheet"></article>

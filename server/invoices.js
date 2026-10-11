@@ -2,13 +2,20 @@ import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { computeTotals, nextNumber, round2 } from '../src/invoice-model.js';
+import {
+  computeTotals,
+  deriveStatus,
+  docKind,
+  nextNumber,
+  paymentsOf,
+  plusDaysIso,
+  round2,
+  todayIso,
+} from '../src/invoice-model.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const dataDir = path.join(__dirname, '..', 'data');
 const file = path.join(dataDir, 'invoices.json');
-
-const STATUSES = new Set(['draft', 'sent', 'partial', 'paid']);
 
 export class InvoiceError extends Error {
   constructor(message, status = 400) {
@@ -51,11 +58,28 @@ function isoDate(value, fallback) {
   return fallback;
 }
 
-function today() {
-  return new Date().toISOString().slice(0, 10);
+function actor(user) {
+  if (!user?.id) return null;
+  return {
+    id: String(user.id),
+    name: cleanLine(user.name || user.username || 'Admin', 80),
+    username: cleanLine(user.username, 32),
+  };
 }
 
-export function saveInvoice(input) {
+function cleanPayments(raw, fallbackDate) {
+  if (!Array.isArray(raw)) return null;
+  return raw
+    .slice(0, 40)
+    .map((row) => ({
+      amount: round2(row?.amount),
+      date: isoDate(row?.date, fallbackDate),
+      note: cleanLine(row?.note, 160),
+    }))
+    .filter((row) => row.amount > 0);
+}
+
+export function saveInvoice(input, user, opts = {}) {
   const list = readInvoices();
   const body = input || {};
   const existing = body.id ? list.find((inv) => inv.id === body.id) : null;
@@ -95,10 +119,21 @@ export function saveInvoice(input) {
 
   const gstEnabled = Boolean(body.gstEnabled);
   const gstPercent = gstEnabled ? Math.min(100, Math.max(0, round2(body.gstPercent))) : 0;
-  const advance = round2(body.advance);
-  if (advance < 0) throw new InvoiceError('Advance cannot be negative');
+  const date = isoDate(body.date, existing?.date || todayIso());
+  const kind = existing
+    ? docKind(existing)
+    : body.kind === 'quote' || body.kind === 'demo'
+      ? body.kind
+      : 'invoice';
 
-  const draft = { items, gstEnabled, gstPercent, advance };
+  let payments = cleanPayments(body.payments, date);
+  if (!payments) {
+    const legacy = round2(body.advance);
+    payments = legacy > 0 ? [{ amount: legacy, date, note: 'Advance' }] : paymentsOf(existing || {});
+  }
+  if (kind === 'quote') payments = [];
+
+  const draft = { items, gstEnabled, gstPercent, payments };
   const totals = computeTotals(draft);
   if (totals.advanceOverflow) throw new InvoiceError('Advance is more than the total');
 
@@ -106,17 +141,23 @@ export function saveInvoice(input) {
   if (number && !/^[A-Za-z0-9][A-Za-z0-9._/-]{0,31}$/.test(number)) {
     throw new InvoiceError('Invoice number looks wrong');
   }
-  if (!number) number = existing?.number || nextNumber(list.filter((inv) => inv.id !== existing?.id));
+  if (!number) {
+    number = existing?.number || nextNumber(list.filter((inv) => inv.id !== existing?.id), kind);
+  }
   const clash = list.find((inv) => inv.number === number && inv.id !== existing?.id);
   if (clash) throw new InvoiceError('This invoice number is already used');
 
-  const status = STATUSES.has(body.status) ? body.status : existing?.status || 'draft';
+  const status = deriveStatus(
+    { kind, status: body.status || existing?.status || 'draft' },
+    totals,
+  );
   const now = new Date().toISOString();
   const invoice = {
     id: existing?.id || `inv_${Date.now().toString(36)}_${crypto.randomBytes(3).toString('hex')}`,
     token: existing?.token || crypto.randomBytes(16).toString('hex'),
+    kind,
     number,
-    date: isoDate(body.date, existing?.date || today()),
+    date,
     dueDate: isoDate(body.dueDate, ''),
     status,
     client: {
@@ -131,9 +172,14 @@ export function saveInvoice(input) {
     gstEnabled,
     gstPercent,
     gstin: gstEnabled ? cleanLine(body.gstin, 20).toUpperCase() : '',
-    advance,
+    payments,
+    advance: totals.advance,
     upi: cleanLine(body.upi, 80),
     notes: cleanNote(body.notes, 2000),
+    quoteId: existing?.quoteId || (opts.quoteId ? cleanLine(opts.quoteId, 80) : ''),
+    convertedTo: existing?.convertedTo || '',
+    createdBy: existing?.createdBy || actor(user),
+    updatedBy: existing ? actor(user) : null,
     sends: Array.isArray(existing?.sends) ? existing.sends : [],
     createdAt: existing?.createdAt || now,
     updatedAt: now,
@@ -147,6 +193,39 @@ export function saveInvoice(input) {
   }
   writeInvoices(list);
   return invoice;
+}
+
+export function convertQuote(id, user) {
+  const quote = readInvoices().find((inv) => inv.id === id);
+  if (!quote || docKind(quote) !== 'quote') throw new InvoiceError('Quotation nahi mili', 404);
+  if (quote.convertedTo) {
+    const existing = readInvoices().find((inv) => inv.id === quote.convertedTo);
+    if (existing) return { quote, invoice: existing, already: true };
+  }
+  const invoice = saveInvoice({
+    kind: 'invoice',
+    date: todayIso(),
+    dueDate: plusDaysIso(7),
+    status: 'draft',
+    client: quote.client,
+    items: quote.items,
+    deliverables: quote.deliverables,
+    gstEnabled: quote.gstEnabled,
+    gstPercent: quote.gstPercent,
+    gstin: quote.gstin,
+    payments: [],
+    upi: quote.upi,
+    notes: quote.notes,
+  }, user, { quoteId: quote.id });
+  const list = readInvoices();
+  const savedQuote = list.find((inv) => inv.id === quote.id);
+  if (savedQuote) {
+    savedQuote.convertedTo = invoice.id;
+    savedQuote.updatedAt = new Date().toISOString();
+    if (user) savedQuote.updatedBy = actor(user);
+    writeInvoices(list);
+  }
+  return { quote: savedQuote || quote, invoice, already: false };
 }
 
 export function deleteInvoice(id) {
@@ -165,28 +244,47 @@ export function findById(id) {
   return readInvoices().find((inv) => inv.id === id) || null;
 }
 
-export function markCleared(id) {
+export function markCleared(id, user) {
   const list = readInvoices();
   const inv = list.find((item) => item.id === id);
   if (!inv) throw new InvoiceError('Invoice not found', 404);
+  if (docKind(inv) === 'quote') throw new InvoiceError('Quotation clear nahi hoti. Pehle invoice banao.');
   const totals = computeTotals(inv);
-  if (totals.pending > 0) inv.advance = totals.total;
+  const payments = paymentsOf(inv).map((row) => ({
+    amount: row.amount,
+    date: isoDate(row.date, inv.date || todayIso()),
+    note: cleanLine(row.note, 160) || 'Payment',
+  }));
+  if (totals.pending > 0.009) {
+    payments.push({
+      amount: round2(Math.max(0, totals.pending)),
+      date: todayIso(),
+      note: 'Clear',
+    });
+  }
+  inv.payments = payments;
+  inv.advance = round2(payments.reduce((sum, row) => sum + row.amount, 0));
   inv.status = 'paid';
+  if (user) inv.updatedBy = actor(user);
   inv.updatedAt = new Date().toISOString();
   writeInvoices(list);
   return inv;
 }
 
-export function recordSend(id, channel) {
+export function recordSend(id, channel, user) {
   const list = readInvoices();
   const inv = list.find((item) => item.id === id);
   if (!inv) throw new InvoiceError('Invoice not found', 404);
   inv.sends = Array.isArray(inv.sends) ? inv.sends : [];
   inv.sends.push({ channel, at: new Date().toISOString() });
   if (inv.status === 'draft') {
-    const totals = computeTotals(inv);
-    inv.status = totals.pending <= 0 ? 'paid' : 'sent';
+    if (docKind(inv) === 'quote') inv.status = 'sent';
+    else {
+      const totals = computeTotals(inv);
+      inv.status = totals.pending <= 0 ? 'paid' : 'sent';
+    }
   }
+  if (user) inv.updatedBy = actor(user);
   inv.updatedAt = new Date().toISOString();
   writeInvoices(list);
   return inv;

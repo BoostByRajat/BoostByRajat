@@ -5,12 +5,15 @@ import {
   PRESETS,
   accountSummary,
   computeTotals,
+  deriveStatus,
+  docKind,
   emailSubject,
   formatDate,
   formatInr,
   messageText,
   monthKey,
   monthLabel,
+  paymentsOf,
   pdfFileName,
   plusDaysIso,
   shiftMonth,
@@ -22,17 +25,18 @@ import { downloadFile, elementToPdfFile, fileToBase64 } from './invoice-pdf.js';
 const $ = (id) => document.getElementById(id);
 
 let currentId = null;
+let currentKind = 'invoice';
+let currentUser = null;
+let loadedCreatedBy = null;
 let items = [{ description: '', qty: 1, rate: 0 }];
 let deliverables = [''];
+let payments = [];
 let busy = false;
 let allInvoices = [];
 let allClients = [];
+let nextNumbers = { invoice: 'BBR-001', demo: 'DEMO-001', quote: 'QT-001' };
 let viewMonth = todayIso().slice(0, 7);
 let historyAll = false;
-
-function password() {
-  return $('password').value;
-}
 
 function setStatus(text) {
   const el = $('invStatus');
@@ -47,6 +51,7 @@ function vendor() {
 function collect() {
   return {
     id: currentId,
+    kind: currentKind,
     number: $('number').value.trim(),
     date: $('date').value,
     dueDate: $('due').value,
@@ -67,14 +72,22 @@ function collect() {
     gstEnabled: $('gstOn').checked,
     gstPercent: Number($('gstPercent').value) || 0,
     gstin: $('gstin').value.trim(),
-    advance: Number($('advance').value) || 0,
+    payments: currentKind === 'quote'
+      ? []
+      : payments
+          .map((row) => ({
+            amount: Number(row.amount) || 0,
+            date: row.date || todayIso(),
+            note: String(row.note || '').trim(),
+          }))
+          .filter((row) => row.amount > 0),
     upi: $('upi').value.trim(),
     notes: $('notes').value.trim(),
   };
 }
 
 function validate(payload) {
-  if (!password()) throw new Error('Pehle login karo');
+  if (!currentUser) throw new Error('Pehle login karo');
   if (payload.client.name.length < 2) throw new Error('Client ka naam likho');
   const filled = payload.items.filter((item) => item.description);
   if (!filled.length) throw new Error('Kam se kam ek kaam aur rate likho');
@@ -163,9 +176,33 @@ function field(type, value, placeholder) {
   return input;
 }
 
+function syncKind() {
+  for (const id of ['kindInvoice', 'kindQuote', 'kindDemo']) {
+    const btn = $(id);
+    btn.setAttribute('aria-pressed', btn.dataset.kind === currentKind ? 'true' : 'false');
+  }
+  $('dueLabel').textContent = currentKind === 'quote' ? 'Valid till' : 'Due date';
+  const pendingLabel = $('mPending')?.querySelector('span');
+  if (pendingLabel) pendingLabel.textContent = currentKind === 'quote' ? 'Estimate' : 'Pending';
+  $('payBlock').hidden = currentKind === 'quote';
+  $('payHint').textContent = currentKind === 'demo'
+    ? 'Demo payment sheet par dikhegi. Earning aur invoice number mein nahi ginegi.'
+    : 'Jo amount mil chuka hai. Pending total minus in payments.';
+  $('convertBtn').hidden = !(currentKind === 'quote' && currentId);
+  $('dueBtn').hidden = currentKind === 'quote';
+  $('clearBtn').hidden = currentKind === 'quote';
+  if (!currentId) {
+    const key = currentKind === 'demo' ? 'demo' : currentKind === 'quote' ? 'quote' : 'invoice';
+    $('number').placeholder = nextNumbers[key] || 'BBR-001';
+  }
+}
+
 function refresh() {
+  syncKind();
   const payload = collect();
   const totals = computeTotals(payload);
+  const derived = deriveStatus(payload, totals);
+  $('status').value = derived;
   $('mSub').textContent = formatInr(totals.subtotal);
   $('mGstRow').hidden = !totals.gstEnabled;
   $('mGst').textContent = formatInr(totals.gstAmount);
@@ -182,15 +219,65 @@ function refresh() {
   });
   const preview = {
     ...payload,
+    status: derived,
     number: payload.number || $('number').placeholder || 'BBR-NEW',
+    createdBy: loadedCreatedBy || (currentUser ? { name: currentUser.name } : null),
   };
   paintSheet($('sheet'), preview, { showEmpty: true });
   fitSheet($('sheetZoom'), $('sheet'));
   $('saveBtn').textContent = currentId ? 'Save' : 'Generate';
 }
 
+function renderPayments() {
+  const root = $('payments');
+  root.replaceChildren();
+  if (!payments.length) {
+    const empty = document.createElement('p');
+    empty.className = 'muted';
+    empty.textContent = 'Abhi koi payment nahi.';
+    root.appendChild(empty);
+    return;
+  }
+  payments.forEach((row, index) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'pay-row';
+    const amount = field('number', row.amount, 'Amount');
+    amount.min = '0';
+    amount.step = '1';
+    const date = field('date', row.date || todayIso(), '');
+    const note = field('text', row.note, 'Note');
+    note.classList.add('pay-note');
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'icon-btn';
+    remove.textContent = '×';
+    remove.setAttribute('aria-label', 'Payment hatao');
+    amount.addEventListener('input', () => {
+      payments[index].amount = amount.value;
+      refresh();
+    });
+    date.addEventListener('change', () => {
+      payments[index].date = date.value;
+      refresh();
+    });
+    note.addEventListener('input', () => {
+      payments[index].note = note.value;
+      refresh();
+    });
+    remove.addEventListener('click', () => {
+      payments.splice(index, 1);
+      renderPayments();
+      refresh();
+    });
+    wrap.append(amount, date, note, remove);
+    root.appendChild(wrap);
+  });
+}
+
 function loadInv(inv) {
   currentId = inv.id;
+  currentKind = docKind(inv);
+  loadedCreatedBy = inv.createdBy || null;
   $('number').value = inv.number || '';
   $('date').value = inv.date || todayIso();
   $('due').value = inv.dueDate || '';
@@ -211,7 +298,11 @@ function loadInv(inv) {
   $('gstPercent').value = inv.gstPercent || 18;
   $('gstin').value = inv.gstin || '';
   $('gstFields').hidden = !inv.gstEnabled;
-  $('advance').value = String(inv.advance ?? 0);
+  payments = paymentsOf(inv).map((row) => ({
+    amount: row.amount,
+    date: row.date || inv.date || todayIso(),
+    note: row.note || '',
+  }));
   $('upi').value = inv.upi || '';
   $('notes').value = inv.notes || '';
   const link = $('openLink');
@@ -227,13 +318,17 @@ function loadInv(inv) {
   $('clientPick').value = match?.id || '';
   renderItems();
   renderDeliverables();
+  renderPayments();
   refresh();
 }
 
 function blankForm(next) {
   currentId = null;
+  currentKind = 'invoice';
+  loadedCreatedBy = null;
+  payments = [];
   $('number').value = '';
-  $('number').placeholder = next || 'BBR-001';
+  $('number').placeholder = next || nextNumbers.invoice || 'BBR-001';
   $('date').value = todayIso();
   $('due').value = plusDaysIso(7);
   $('status').value = 'draft';
@@ -249,28 +344,28 @@ function blankForm(next) {
   $('gstFields').hidden = true;
   $('gstPercent').value = '18';
   $('gstin').value = '';
-  $('advance').value = '0';
   $('upi').value = '';
   $('notes').value = DEFAULT_NOTE;
   $('openLink').hidden = true;
   renderItems();
   renderDeliverables();
+  renderPayments();
   refresh();
 }
 
 async function api(url, body) {
   const res = await fetch(url, {
     method: 'POST',
+    credentials: 'same-origin',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ...body, password: password() }),
+    body: JSON.stringify(body || {}),
   });
   const data = await res.json().catch(() => ({}));
   if (res.status === 401) {
-    endSession('Galat password. Bill nahi bani.');
-    throw new Error(data.error || 'Galat password');
+    endSession(data.error || 'Login khatam. Dubara login karo.');
+    throw new Error(data.error || 'Login required');
   }
   if (!res.ok) throw new Error(data.error || 'Request failed');
-  sessionStorage.setItem('bbr-invoice-pass', password());
   return data;
 }
 
@@ -340,16 +435,29 @@ function renderList(list) {
   }
   for (const inv of shown) {
     const totals = computeTotals(inv);
+    const kind = docKind(inv);
     const card = document.createElement('div');
     card.className = 'inv-card';
     const open = document.createElement('button');
     open.type = 'button';
     open.className = 'inv-open';
     const title = document.createElement('strong');
-    title.textContent = `${inv.number} · ${inv.client?.name || 'Client'}`;
+    if (kind !== 'invoice') {
+      const tag = document.createElement('span');
+      tag.className = 'doc-tag';
+      tag.textContent = kind === 'quote' ? 'Quote' : 'Demo';
+      title.appendChild(tag);
+    }
+    title.append(document.createTextNode(`${inv.number} · ${inv.client?.name || 'Client'}`));
     const meta = document.createElement('span');
-    meta.className = totals.pending <= 0 ? 'pending-ok' : 'pending-hot';
-    meta.textContent = `${formatDate(inv.date)} · total ${formatInr(totals.total)} · mila ${formatInr(totals.advance)} · pending ${formatInr(totals.pending)}`;
+    meta.className = kind === 'quote' ? 'muted' : totals.pending <= 0 ? 'pending-ok' : 'pending-hot';
+    const linked = kind === 'quote' && inv.convertedTo
+      ? list.find((row) => row.id === inv.convertedTo)
+      : null;
+    const who = inv.createdBy?.name ? ` · ${inv.createdBy.name}` : '';
+    meta.textContent = kind === 'quote'
+      ? `${formatDate(inv.date)} · estimate ${formatInr(totals.total)}${linked ? ` · invoice ${linked.number}` : ''}${who}`
+      : `${formatDate(inv.date)} · total ${formatInr(totals.total)} · mila ${formatInr(totals.advance)} · pending ${formatInr(totals.pending)}${who}`;
     open.append(title, meta);
     open.addEventListener('click', () => {
       loadInv(inv);
@@ -358,26 +466,76 @@ function renderList(list) {
     });
     const actions = document.createElement('div');
     actions.className = 'inv-card-actions';
-    if (totals.pending > 0) {
-      const due = document.createElement('button');
-      due.type = 'button';
-      due.className = 'btn btn-ghost btn-sm';
-      due.textContent = 'Due message';
-      due.addEventListener('click', () => sendNotice(inv, 'due'));
-      actions.appendChild(due);
+    if (kind === 'quote') {
+      const convert = document.createElement('button');
+      convert.type = 'button';
+      convert.className = 'btn btn-ghost btn-sm';
+      convert.textContent = linked ? 'Invoice kholo' : 'Invoice banao';
+      convert.addEventListener('click', () => {
+        if (linked) {
+          loadInv(linked);
+          setStatus(`${linked.number} khul gaya.`);
+          return;
+        }
+        convertQuote(inv.id);
+      });
+      actions.appendChild(convert);
+    } else {
+      if (totals.pending > 0) {
+        const due = document.createElement('button');
+        due.type = 'button';
+        due.className = 'btn btn-ghost btn-sm';
+        due.textContent = 'Due message';
+        due.addEventListener('click', () => sendNotice(inv, 'due'));
+        actions.appendChild(due);
+      }
+      const clear = document.createElement('button');
+      clear.type = 'button';
+      clear.className = 'btn btn-ghost btn-sm';
+      clear.textContent = totals.pending > 0 ? 'Clear + message' : 'Clear message';
+      clear.addEventListener('click', () => sendNotice(inv, 'clear'));
+      actions.appendChild(clear);
     }
-    const clear = document.createElement('button');
-    clear.type = 'button';
-    clear.className = 'btn btn-ghost btn-sm';
-    clear.textContent = totals.pending > 0 ? 'Clear + message' : 'Clear message';
-    clear.addEventListener('click', () => sendNotice(inv, 'clear'));
     const del = document.createElement('button');
     del.type = 'button';
     del.className = 'btn btn-ghost btn-sm';
     del.textContent = 'Delete';
     del.addEventListener('click', () => removeInv(inv));
-    actions.append(clear, del);
+    actions.append(del);
     card.append(open, actions);
+    root.appendChild(card);
+  }
+}
+
+function renderMembers(admins) {
+  const root = $('memberList');
+  if (!root) return;
+  root.replaceChildren();
+  for (const admin of admins || []) {
+    const card = document.createElement('div');
+    card.className = 'inv-card';
+    const title = document.createElement('strong');
+    title.textContent = `${admin.name} · ${admin.username}`;
+    const meta = document.createElement('span');
+    meta.textContent = admin.role === 'owner' ? 'Owner' : (admin.active ? 'Admin' : 'Disabled');
+    card.append(title, meta);
+    if (admin.role !== 'owner') {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'btn btn-ghost btn-sm';
+      btn.textContent = admin.active ? 'Disable' : 'Enable';
+      btn.addEventListener('click', async () => {
+        try {
+          const data = await api('/api/admins/active', { id: admin.id, active: !admin.active });
+          renderMembers(data.admins || []);
+        } catch (err) {
+          const status = $('memStatus');
+          status.hidden = false;
+          status.textContent = err.message || 'Update fail';
+        }
+      });
+      card.appendChild(btn);
+    }
     root.appendChild(card);
   }
 }
@@ -386,11 +544,20 @@ async function loadList() {
   const data = await api('/api/invoices/list', {});
   allInvoices = data.invoices || [];
   allClients = data.clients || [];
+  nextNumbers = {
+    invoice: data.nextNumber || 'BBR-001',
+    demo: data.nextDemo || 'DEMO-001',
+    quote: data.nextQuote || 'QT-001',
+  };
+  if (data.user) {
+    currentUser = data.user;
+    showDesk(true);
+  }
+  if (currentUser?.role === 'owner') renderMembers(data.admins || []);
   renderClientPick();
   renderAccounts();
   renderList(allInvoices);
   if (!currentId) {
-    $('number').placeholder = data.nextNumber || 'BBR-001';
     refresh();
   }
   if (!$('upi').value && data.defaultUpi && !currentId) $('upi').value = data.defaultUpi;
@@ -413,16 +580,33 @@ async function saveInvoice() {
 }
 
 async function deliverConfirmation(invoice, force) {
+  if (docKind(invoice) === 'demo' && !force) {
+    return ' Demo bill number aur earning mein nahi jodi gayi. WhatsApp automatically nahi gaya.';
+  }
+  const quote = docKind(invoice) === 'quote';
   const phone = waNumber(invoice.client?.phone);
-  if (!phone) return ' Client ka WhatsApp likho, tab order confirmation jayegi.';
+  if (!phone && !quote) return ' Client ka WhatsApp likho, tab order confirmation jayegi.';
   try {
     const snap = await api('/api/invoices/wa-status', {});
+    if (quote && !snap.quoteTemplate) {
+      const data = await api('/api/invoices/whatsapp', { id: invoice.id, force: Boolean(force) });
+      if (data.invoice) {
+        loadInv(data.invoice);
+        await loadList();
+      }
+      if (data.text) {
+        try { await navigator.clipboard.writeText(data.text); } catch { /* clipboard optional */ }
+      }
+      if (data.already) return ' Quotation pehle issue ho chuki hai. Message dubara copy karne ke liye Send again dabao.';
+      return ' Quotation save ho gayi. WhatsApp template abhi nahi hai, message copy ho gaya.';
+    }
     if (snap.status !== 'open') {
       return ' WhatsApp API abhi Meta approval par hai. Number link karne ki zarurat nahi — panel connect hote hi confirmation jayegi.';
     }
     let pdfBase64 = '';
     let filename = '';
-    if (snap.document !== false) {
+    const wantPdf = quote ? Boolean(snap.quoteDocument) : snap.document !== false;
+    if (wantPdf) {
       try {
         const file = await makePdf(invoice);
         pdfBase64 = await fileToBase64(file);
@@ -441,7 +625,16 @@ async function deliverConfirmation(invoice, force) {
       loadInv(data.invoice);
       await loadList();
     }
-    if (data.sent) return ' Order confirmation WhatsApp API se client ko chali gayi.';
+    if (data.sent) {
+      return quote
+        ? ' Quotation WhatsApp se client ko chali gayi.'
+        : ' Order confirmation WhatsApp API se client ko chali gayi.';
+    }
+    if (data.copied && data.text) {
+      try { await navigator.clipboard.writeText(data.text); } catch { /* clipboard optional */ }
+      return ' Message copy ho gaya.';
+    }
+    if (data.skipped) return ' Demo par WhatsApp automatically nahi bheja.';
     if (data.already) return ' Confirmation pehle hi ja chuki hai.';
     return ` ${data.error || 'WhatsApp API se message nahi gaya.'}`;
   } catch (err) {
@@ -515,7 +708,7 @@ async function makePdf(inv) {
 
 function lock(on) {
   busy = on;
-  for (const id of ['saveBtn', 'pdfBtn', 'waBtn', 'mailBtn', 'copyBtn', 'dueBtn', 'clearBtn']) {
+  for (const id of ['saveBtn', 'pdfBtn', 'waBtn', 'mailBtn', 'copyBtn', 'dueBtn', 'clearBtn', 'convertBtn']) {
     $(id).disabled = on;
   }
 }
@@ -685,10 +878,30 @@ $('gstOn').addEventListener('change', () => {
   refresh();
 });
 
-for (const id of ['number', 'date', 'due', 'status', 'clientName', 'business', 'phone', 'email', 'city', 'gstPercent', 'gstin', 'advance', 'upi', 'notes']) {
+for (const id of ['number', 'date', 'due', 'status', 'clientName', 'business', 'phone', 'email', 'city', 'gstPercent', 'gstin', 'upi', 'notes']) {
   $(id).addEventListener('input', refresh);
   $(id).addEventListener('change', refresh);
 }
+
+for (const btn of document.querySelectorAll('#kindPick [data-kind]')) {
+  btn.addEventListener('click', () => {
+    const next = btn.dataset.kind;
+    if (currentId && next !== currentKind) {
+      setStatus('Saved document ka type nahi badalta. Quotation se invoice, Invoice banao se banti hai.');
+      return;
+    }
+    currentKind = next;
+    if (currentKind === 'quote') payments = [];
+    renderPayments();
+    refresh();
+  });
+}
+
+$('addPay').addEventListener('click', () => {
+  payments.push({ amount: '', date: todayIso(), note: '' });
+  renderPayments();
+  $('payments').querySelector('.pay-row:last-child input')?.focus();
+});
 
 for (const [id, pct] of [
   ['adv40', 0.4],
@@ -696,10 +909,32 @@ for (const [id, pct] of [
   ['adv100', 1],
 ]) {
   $(id).addEventListener('click', () => {
-    const totals = computeTotals(collect());
-    $('advance').value = String(Math.round(totals.total * pct));
+    const totals = computeTotals({ ...collect(), payments: [] });
+    const amount = Math.round(totals.total * pct);
+    if (payments.length > 1 && !confirm('Current payments hat kar ek advance line lagaun?')) return;
+    payments = amount > 0 ? [{ amount, date: todayIso(), note: 'Advance' }] : [];
+    renderPayments();
     refresh();
   });
+}
+
+async function convertQuote(id) {
+  if (!confirm('Is quotation se asli invoice banaun? Quotation earning mein nahi aati.')) return;
+  if (busy) return;
+  lock(true);
+  setStatus('Invoice ban rahi hai…');
+  try {
+    if (currentId === id) await saveInvoice();
+    const data = await api('/api/invoices/convert', { id });
+    loadInv(data.invoice);
+    await loadList();
+    const extra = data.already ? '' : await deliverConfirmation(data.invoice, false);
+    setStatus((data.already ? `${data.invoice.number} pehle ban chuki hai.` : `${data.invoice.number} ban gayi.`) + extra);
+  } catch (err) {
+    setStatus(err.message || 'Invoice nahi bani');
+  } finally {
+    lock(false);
+  }
 }
 
 $('clientPick').addEventListener('change', () => {
@@ -750,7 +985,6 @@ $('loadBtn').addEventListener('click', async () => {
     setStatus('Saved invoices load ho gaye.');
     refreshWa();
   } catch (err) {
-    sessionStorage.removeItem('bbr-invoice-pass');
     setStatus(err.message || 'List fail');
   }
 });
@@ -763,7 +997,7 @@ document.fonts?.ready?.then(() => fitSheet($('sheetZoom'), $('sheet')));
 
 async function refreshWa() {
   const state = $('waState');
-  if (!password()) {
+  if (!currentUser) {
     state.textContent = 'WhatsApp API panel Meta approval ke baad message bhejega. Number link karne ki zarurat nahi.';
     return;
   }
@@ -781,10 +1015,20 @@ function showDesk(on) {
   $('loginGate').hidden = on;
   $('desk').hidden = !on;
   $('logoutBtn').hidden = !on;
+  const who = $('whoami');
+  who.hidden = !on;
+  who.textContent = on && currentUser ? currentUser.name : '';
+  $('members').hidden = !(on && currentUser?.role === 'owner');
 }
 
-function endSession(message) {
-  sessionStorage.removeItem('bbr-invoice-pass');
+async function endSession(message) {
+  try {
+    await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' });
+  } catch {
+    /* cookie clear is best-effort */
+  }
+  currentUser = null;
+  $('username').value = '';
   $('password').value = '';
   showDesk(false);
   const status = $('loginStatus');
@@ -792,15 +1036,8 @@ function endSession(message) {
   status.textContent = message || '';
 }
 
-async function login(passwordValue) {
-  const res = await fetch('/api/invoices/login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ password: passwordValue }),
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || 'Galat password');
-  sessionStorage.setItem('bbr-invoice-pass', passwordValue);
+async function enterDesk(user) {
+  currentUser = user;
   showDesk(true);
   try {
     await loadList();
@@ -810,30 +1047,73 @@ async function login(passwordValue) {
   refreshWa();
 }
 
+async function login(username, passwordValue) {
+  const res = await fetch('/api/auth/login', {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password: passwordValue }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Incorrect username or password');
+  await enterDesk(data.user);
+}
+
 $('loginForm').addEventListener('submit', async (event) => {
   event.preventDefault();
   const status = $('loginStatus');
   status.hidden = false;
-  status.textContent = 'Login ho raha hai…';
+  status.textContent = 'Signing in…';
   $('loginBtn').disabled = true;
   try {
-    await login(password());
+    await login($('username').value.trim(), $('password').value);
     status.hidden = true;
   } catch (err) {
-    endSession(err.message || 'Galat password');
+    const message = err.message || 'Incorrect username or password';
+    $('password').value = '';
+    showDesk(false);
+    status.hidden = false;
+    status.textContent = message;
   } finally {
     $('loginBtn').disabled = false;
   }
 });
 
 $('logoutBtn').addEventListener('click', () => {
-  endSession('Logout ho gaya. Bina login bill nahi banti.');
+  endSession('Signed out.');
+});
+
+$('convertBtn').addEventListener('click', () => {
+  if (currentId) convertQuote(currentId);
+});
+
+$('memberForm').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const status = $('memStatus');
+  status.hidden = false;
+  status.textContent = 'Member add ho raha hai…';
+  try {
+    const data = await api('/api/admins', {
+      username: $('memUser').value.trim(),
+      name: $('memName').value.trim(),
+      password: $('memPass').value,
+    });
+    $('memUser').value = '';
+    $('memName').value = '';
+    $('memPass').value = '';
+    renderMembers(data.admins || []);
+    status.textContent = 'Member add ho gaya. Agli bill par uska naam aa sakta hai.';
+  } catch (err) {
+    status.textContent = err.message || 'Member add nahi hua';
+  }
 });
 
 blankForm();
 showDesk(false);
-const savedPass = sessionStorage.getItem('bbr-invoice-pass');
-if (savedPass) {
-  $('password').value = savedPass;
-  login(savedPass).catch((err) => endSession(err.message || 'Galat password'));
-}
+fetch('/api/auth/me', { credentials: 'same-origin' })
+  .then(async (res) => {
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.user) await enterDesk(data.user);
+  })
+  .catch(() => {});

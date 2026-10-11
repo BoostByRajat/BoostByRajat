@@ -5,11 +5,13 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { createServer as createViteServer } from 'vite';
 import { translateAndReply, detectOnly, siteAssistantReply } from './server/ai.js';
-import { addLead, readLeads } from './server/leads.js';
-import { deleteInvoice, findById, findByToken, InvoiceError, markCleared, readInvoices, recordSend, saveInvoice } from './server/invoices.js';
+import { addLead, readLeads, upsertQuotationLead } from './server/leads.js';
+import { AdminError, createAdmin, listPublicAdmins, setAdminActive } from './server/admins.js';
+import { clearSessionCookie, loginWithPassword, requestIsSecure, setSessionCookie, userFromRequest } from './server/auth.js';
+import { convertQuote, deleteInvoice, findById, findByToken, InvoiceError, markCleared, readInvoices, recordSend, saveInvoice } from './server/invoices.js';
 import { listClients, upsertClient } from './server/clients.js';
 import { sendInvoiceEmail, smtpReady } from './server/invoice-mail.js';
-import { clearNoticeText, computeTotals, dueNoticeText, emailSubject, messageText, nextNumber, orderConfirmationText } from './src/invoice-model.js';
+import { clearNoticeText, computeTotals, docKind, dueNoticeText, emailSubject, messageText, nextNumber, orderConfirmationText, quoteMessageText } from './src/invoice-model.js';
 import { site } from './src/config.js';
 import { sendNoticeOnWhatsApp, sendOrderOnWhatsApp, waSnapshot } from './server/wa-api.js';
 
@@ -35,9 +37,23 @@ app.use((req, res, next) => {
   res.redirect(301, new URL(req.originalUrl, `${siteOrigin}/`).toString());
 });
 
-function deskPasswordOk(password) {
-  const expected = process.env.VENDOR_DESK_PASSWORD || 'change-me';
-  return String(password || '') === expected;
+function requireDesk(req, res) {
+  const user = userFromRequest(req);
+  if (!user) {
+    res.status(401).json({ error: 'Login required' });
+    return null;
+  }
+  return user;
+}
+
+function requireOwner(req, res) {
+  const user = requireDesk(req, res);
+  if (!user) return null;
+  if (user.role !== 'owner') {
+    res.status(403).json({ error: 'Sirf owner member add kar sakta hai' });
+    return null;
+  }
+  return user;
 }
 
 app.get('/api/health', (_req, res) => {
@@ -144,11 +160,56 @@ app.post('/api/order', (req, res) => {
   }
 });
 
+app.post('/api/auth/login', (req, res) => {
+  const user = loginWithPassword(req.body?.username, req.body?.password);
+  if (!user) return res.status(401).json({ error: 'Incorrect username or password' });
+  setSessionCookie(res, user, requestIsSecure(req, isProd));
+  res.json({ ok: true, user });
+});
+
+app.post('/api/auth/logout', (req, res) => {
+  clearSessionCookie(res, requestIsSecure(req, isProd));
+  res.json({ ok: true });
+});
+
+app.get('/api/auth/me', (req, res) => {
+  const user = userFromRequest(req);
+  if (!user) return res.status(401).json({ error: 'Login required' });
+  res.json({ ok: true, user });
+});
+
+app.get('/api/admins', (req, res) => {
+  if (!requireOwner(req, res)) return;
+  res.json({ ok: true, admins: listPublicAdmins() });
+});
+
+app.post('/api/admins', (req, res) => {
+  try {
+    if (!requireOwner(req, res)) return;
+    const admin = createAdmin(req.body || {});
+    res.json({ ok: true, admin, admins: listPublicAdmins() });
+  } catch (err) {
+    const status = err instanceof AdminError ? err.status : 500;
+    if (status === 500) console.error('admin create', err);
+    res.status(status).json({ error: err.message || 'Member add nahi hua' });
+  }
+});
+
+app.post('/api/admins/active', (req, res) => {
+  try {
+    if (!requireOwner(req, res)) return;
+    setAdminActive(String(req.body?.id || ''), Boolean(req.body?.active));
+    res.json({ ok: true, admins: listPublicAdmins() });
+  } catch (err) {
+    const status = err instanceof AdminError ? err.status : 500;
+    if (status === 500) console.error('admin active', err);
+    res.status(status).json({ error: err.message || 'Member update nahi hua' });
+  }
+});
+
 app.post('/api/translate', async (req, res) => {
   try {
-    if (!deskPasswordOk(req.body?.password)) {
-      return res.status(401).json({ error: 'Wrong password' });
-    }
+    if (!requireDesk(req, res)) return;
     const text = String(req.body?.text || '').trim();
     if (text.length < 2) return res.status(400).json({ error: 'Text required' });
     const vendorLang = process.env.VENDOR_LANG || 'hi';
@@ -244,33 +305,27 @@ app.post('/api/leads', (req, res) => {
 
 app.post('/api/leads/list', (req, res) => {
   try {
-    if (!deskPasswordOk(req.body?.password)) {
-      return res.status(401).json({ error: 'Wrong password' });
-    }
+    if (!requireDesk(req, res)) return;
     res.json({ ok: true, leads: readLeads() });
   } catch (err) {
     res.status(500).json({ error: err.message || 'List failed' });
   }
 });
 
-app.post('/api/invoices/login', (req, res) => {
-  if (!deskPasswordOk(req.body?.password)) {
-    return res.status(401).json({ error: 'Galat password' });
-  }
-  res.json({ ok: true });
-});
-
 app.post('/api/invoices/list', (req, res) => {
   try {
-    if (!deskPasswordOk(req.body?.password)) {
-      return res.status(401).json({ error: 'Wrong password' });
-    }
+    const user = requireDesk(req, res);
+    if (!user) return;
     const invoices = readInvoices().sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)));
     res.json({
       ok: true,
       invoices,
       clients: listClients(),
-      nextNumber: nextNumber(invoices),
+      user,
+      admins: user.role === 'owner' ? listPublicAdmins() : [],
+      nextNumber: nextNumber(invoices, 'invoice'),
+      nextDemo: nextNumber(invoices, 'demo'),
+      nextQuote: nextNumber(invoices, 'quote'),
       defaultUpi: process.env.INVOICE_UPI || '',
       smtp: smtpReady(),
     });
@@ -280,19 +335,33 @@ app.post('/api/invoices/list', (req, res) => {
 });
 
 app.post('/api/invoices/wa-status', (req, res) => {
-  if (!deskPasswordOk(req.body?.password)) {
-    return res.status(401).json({ error: 'Wrong password' });
-  }
+  if (!requireDesk(req, res)) return;
   res.json({ ok: true, ...waSnapshot() });
 });
 
 app.post('/api/invoices/whatsapp', async (req, res) => {
   try {
-    if (!deskPasswordOk(req.body?.password)) {
-      return res.status(401).json({ error: 'Wrong password' });
-    }
+    const user = requireDesk(req, res);
+    if (!user) return;
     const inv = findById(String(req.body?.id || ''));
     if (!inv) return res.status(404).json({ error: 'Invoice not found' });
+    const link = invoicePublicUrl(req, inv.token);
+    if (docKind(inv) === 'demo' && !req.body?.force) {
+      return res.json({ ok: true, sent: false, skipped: true, invoice: inv });
+    }
+    if (docKind(inv) === 'quote' && !String(process.env.WHATSAPP_QUOTE_TEMPLATE || '').trim()) {
+      const text = quoteMessageText(inv, link, { whatsapp: site.whatsapp, email: site.email });
+      const alreadyCopy = (inv.sends || []).some((row) => row.channel === 'copy' || row.channel === 'whatsapp');
+      const invoice = alreadyCopy && !req.body?.force ? inv : recordSend(inv.id, 'copy', user);
+      return res.json({
+        ok: true,
+        sent: false,
+        copied: true,
+        already: alreadyCopy && !req.body?.force,
+        text,
+        invoice,
+      });
+    }
     const already = (inv.sends || []).some((row) => row.channel === 'whatsapp');
     if (already && !req.body?.force) {
       return res.json({ ok: true, sent: false, already: true, invoice: inv });
@@ -322,7 +391,6 @@ app.post('/api/invoices/whatsapp', async (req, res) => {
     const filename = String(req.body?.filename || `BoostByRajat-${inv.number}.pdf`)
       .replace(/[^\w.-]+/g, '-')
       .slice(0, 80);
-    const link = invoicePublicUrl(req, inv.token);
     const safeName = filename.toLowerCase().endsWith('.pdf') ? filename : `${filename}.pdf`;
     await sendOrderOnWhatsApp({
       phone: inv.client?.phone,
@@ -332,7 +400,7 @@ app.post('/api/invoices/whatsapp', async (req, res) => {
       invoice: inv,
       link,
     });
-    const invoice = recordSend(inv.id, 'whatsapp');
+    const invoice = recordSend(inv.id, 'whatsapp', user);
     console.log('WhatsApp order confirmation', invoice.number);
     res.json({ ok: true, sent: true, invoice });
   } catch (err) {
@@ -346,11 +414,22 @@ app.post('/api/invoices/whatsapp', async (req, res) => {
 
 app.post('/api/invoices/save', (req, res) => {
   try {
-    if (!deskPasswordOk(req.body?.password)) {
-      return res.status(401).json({ error: 'Wrong password' });
+    const user = requireDesk(req, res);
+    if (!user) return;
+    const invoice = saveInvoice(req.body || {}, user);
+    if (docKind(invoice) !== 'demo') upsertClient(invoice.client);
+    if (docKind(invoice) === 'quote') {
+      upsertQuotationLead({
+        quoteId: invoice.id,
+        createdAt: invoice.createdAt,
+        name: invoice.client?.name || null,
+        email: invoice.client?.email || null,
+        whatsapp: invoice.client?.phone || '',
+        location: invoice.client?.city || null,
+        interest: (invoice.items || []).map((item) => item.description).filter(Boolean).slice(0, 8),
+        message: `Quotation ${invoice.number || ''}`.trim(),
+      });
     }
-    const invoice = saveInvoice(req.body || {});
-    upsertClient(invoice.client);
     res.json({ ok: true, invoice, clients: listClients() });
   } catch (err) {
     const status = err instanceof InvoiceError ? err.status : 500;
@@ -359,19 +438,35 @@ app.post('/api/invoices/save', (req, res) => {
   }
 });
 
+app.post('/api/invoices/convert', (req, res) => {
+  try {
+    const user = requireDesk(req, res);
+    if (!user) return;
+    const result = convertQuote(String(req.body?.id || ''), user);
+    if (docKind(result.invoice) === 'invoice') upsertClient(result.invoice.client);
+    res.json({ ok: true, ...result, clients: listClients() });
+  } catch (err) {
+    const status = err instanceof InvoiceError ? err.status : 500;
+    if (!(err instanceof InvoiceError)) console.error('invoice convert', err);
+    res.status(status).json({ error: err.message || 'Invoice nahi bani' });
+  }
+});
+
 app.post('/api/invoices/notice', async (req, res) => {
   try {
-    if (!deskPasswordOk(req.body?.password)) {
-      return res.status(401).json({ error: 'Wrong password' });
-    }
+    const user = requireDesk(req, res);
+    if (!user) return;
     const kind = req.body?.kind === 'clear' ? 'clear' : 'due';
     let inv = findById(String(req.body?.id || ''));
     if (!inv) return res.status(404).json({ error: 'Invoice not found' });
+    if (docKind(inv) === 'quote') {
+      return res.status(400).json({ error: 'Quotation par due/clear nahi. Pehle invoice banao.' });
+    }
     if (!inv.client?.phone) return res.status(400).json({ error: 'Client ka WhatsApp number likho' });
     if (kind === 'due' && computeTotals(inv).pending <= 0) {
       return res.status(400).json({ error: 'Is bill par pending nahi hai' });
     }
-    if (kind === 'clear') inv = markCleared(inv.id);
+    if (kind === 'clear') inv = markCleared(inv.id, user);
     const link = invoicePublicUrl(req, inv.token);
     const text = kind === 'due' ? dueNoticeText(inv, link) : clearNoticeText(inv, link);
     const wa = waSnapshot();
@@ -379,7 +474,7 @@ app.post('/api/invoices/notice', async (req, res) => {
       return res.json({ ok: true, sent: false, invoice: inv, error: wa.error });
     }
     await sendNoticeOnWhatsApp({ phone: inv.client?.phone, text });
-    const invoice = recordSend(inv.id, kind);
+    const invoice = recordSend(inv.id, kind, user);
     console.log('WhatsApp notice', kind, invoice.number);
     res.json({ ok: true, sent: true, invoice });
   } catch (err) {
@@ -395,9 +490,7 @@ app.post('/api/invoices/notice', async (req, res) => {
 
 app.post('/api/invoices/delete', (req, res) => {
   try {
-    if (!deskPasswordOk(req.body?.password)) {
-      return res.status(401).json({ error: 'Wrong password' });
-    }
+    if (!requireDesk(req, res)) return;
     deleteInvoice(String(req.body?.id || ''));
     res.json({ ok: true });
   } catch (err) {
@@ -412,14 +505,15 @@ app.get('/api/invoices/public/:token', (req, res) => {
   if (!found) return res.status(404).json({ error: 'Invoice not found' });
   const invoice = { ...found };
   delete invoice.sends;
+  delete invoice.updatedBy;
+  if (invoice.createdBy) invoice.createdBy = { name: invoice.createdBy.name };
   res.json({ ok: true, invoice });
 });
 
 app.post('/api/invoices/email', async (req, res) => {
   try {
-    if (!deskPasswordOk(req.body?.password)) {
-      return res.status(401).json({ error: 'Wrong password' });
-    }
+    const user = requireDesk(req, res);
+    if (!user) return;
     const inv = findById(String(req.body?.id || ''));
     if (!inv) return res.status(404).json({ error: 'Invoice not found' });
     if (!inv.client?.email) return res.status(400).json({ error: 'Client email missing' });
@@ -444,7 +538,7 @@ app.post('/api/invoices/email', async (req, res) => {
       pdfBuffer,
       filename: filename.toLowerCase().endsWith('.pdf') ? filename : `${filename}.pdf`,
     });
-    const invoice = recordSend(inv.id, 'email');
+    const invoice = recordSend(inv.id, 'email', user);
     res.json({ ok: true, sent: true, invoice });
   } catch (err) {
     if (err.code === 'NO_SMTP') return res.json({ ok: true, sent: false, reason: 'no_smtp' });
