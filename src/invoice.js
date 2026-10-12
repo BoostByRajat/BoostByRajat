@@ -602,8 +602,8 @@ async function loadList() {
   }
   if (!$('upi').value && data.defaultUpi && !currentId) $('upi').value = data.defaultUpi;
   $('smtpHint').textContent = data.smtp
-    ? 'Email PDF seedha client ke inbox mein ja sakti hai. WhatsApp phone par share sheet kholta hai, laptop par PDF download karke chat kholta hai.'
-    : 'Email pe PDF download hogi aur mail khulegi — attach karke bhej dena. WhatsApp bhi PDF ke saath khulega.';
+    ? 'Gmail connected hai. Generate par client ke email par PDF auto chali jayegi.'
+    : 'Gmail connect nahi hai. Render par SMTP_PASS (Gmail app password) set karo, tab Generate par mail apne aap jayegi.';
   return data;
 }
 
@@ -619,20 +619,42 @@ async function saveInvoice(opts = {}) {
   return { invoice: data.invoice, totals, extra };
 }
 
+async function sendGeneratedMail(invoice, force) {
+  if (docKind(invoice) === 'demo' && !force) return '';
+  const to = String(invoice.client?.email || '').trim();
+  if (!to) return ' Auto mail ke liye client ka email likho.';
+  if ((invoice.sends || []).some((row) => row.channel === 'email') && !force) return '';
+  try {
+    const file = await makePdf(invoice);
+    const data = await api('/api/invoices/email', {
+      id: invoice.id,
+      pdfBase64: await fileToBase64(file),
+      filename: file.name,
+    });
+    if (data.invoice && currentId === data.invoice.id) loadInv(data.invoice);
+    if (data.sent) return ` PDF ${to} par Gmail se chali gayi.`;
+    if (data.reason === 'no_smtp') return ' Gmail abhi connect nahi hai, auto mail nahi gayi.';
+    return ' Auto mail nahi gayi.';
+  } catch (err) {
+    return ` Auto mail nahi gayi: ${err.message || 'fail'}`;
+  }
+}
+
 async function deliverConfirmation(invoice, force) {
+  const mailNote = await sendGeneratedMail(invoice, force);
   if (docKind(invoice) === 'demo' && !force) {
-    return ' Demo bill number aur earning mein nahi jodi gayi. WhatsApp automatically nahi gaya.';
+    return ` Demo bill number aur earning mein nahi jodi gayi. WhatsApp automatically nahi gaya.${mailNote}`;
   }
   const quote = docKind(invoice) === 'quote';
   const phone = waNumber(invoice.client?.phone);
-  if (!phone && !quote) return ' Client ka WhatsApp likho, tab order confirmation jayegi.';
+  if (!phone && !quote) return ` Client ka WhatsApp likho, tab order confirmation jayegi.${mailNote}`;
   try {
     const snap = await api('/api/invoices/wa-status', {});
     if (quote && !snap.quoteTemplate) {
-      return ' Quotation save ho gayi. Download PDF, WhatsApp, ya Email se client ko bhej do.';
+      return ` Quotation save ho gayi. Download PDF, WhatsApp, ya Email se client ko bhej do.${mailNote}`;
     }
     if (snap.status !== 'open') {
-      return ' Save ho gayi. WhatsApp button PDF bhej dega — phone par share sheet, laptop par download ke saath chat.';
+      return ` Save ho gayi. WhatsApp button PDF bhej dega — phone par share sheet, laptop par download ke saath chat.${mailNote}`;
     }
     let pdfBase64 = '';
     let filename = '';
@@ -657,19 +679,19 @@ async function deliverConfirmation(invoice, force) {
       await loadList();
     }
     if (data.sent) {
-      return quote
+      return (quote
         ? ' Quotation WhatsApp se client ko chali gayi.'
-        : ' Order confirmation WhatsApp API se client ko chali gayi.';
+        : ' Order confirmation WhatsApp API se client ko chali gayi.') + mailNote;
     }
     if (data.copied && data.text) {
       try { await navigator.clipboard.writeText(data.text); } catch { /* clipboard optional */ }
-      return ' Message copy ho gaya.';
+      return ` Message copy ho gaya.${mailNote}`;
     }
-    if (data.skipped) return ' Demo par WhatsApp automatically nahi bheja.';
-    if (data.already) return ' Confirmation pehle hi ja chuki hai.';
-    return ` ${data.error || 'WhatsApp API se message nahi gaya.'}`;
+    if (data.skipped) return ` Demo par WhatsApp automatically nahi bheja.${mailNote}`;
+    if (data.already) return ` Confirmation pehle hi ja chuki hai.${mailNote}`;
+    return ` ${data.error || 'WhatsApp API se message nahi gaya.'}${mailNote}`;
   } catch (err) {
-    return ` ${err.message || 'WhatsApp confirmation fail'}`;
+    return ` ${err.message || 'WhatsApp confirmation fail'}${mailNote}`;
   }
 }
 

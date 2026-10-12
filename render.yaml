@@ -31,6 +31,16 @@ services:
         value: https://www.boostbyrajat.co.in
       - key: DATA_DIR
         value: /var/data
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        value: rajatbissa16@gmail.com
+      - key: SMTP_FROM
+        value: "BoostByRajat <rajatbissa16@gmail.com>"
+      - key: SMTP_PASS
+        sync: false
       - key: VITE_GA_MEASUREMENT_ID
         value: G-H65FJQ44E0
       - key: VITE_GSC_VERIFICATION
