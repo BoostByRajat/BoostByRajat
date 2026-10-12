@@ -101,6 +101,18 @@
 .money-box .pending-line { font-size: 1.12rem; color: var(--amber); font-weight: 700; }
 .money-box .pending-line.ok { color: var(--teal); }
 .money-box .pending-line.bad { color: #ff8d8d; }
+.money-box .disc-line strong { color: var(--teal); }
+.money-box .disc-line.bad strong { color: #ff8d8d; }
+.pdf-host {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 794px;
+  transform: translateX(-120%);
+  pointer-events: none;
+  z-index: -1;
+}
+.pdf-host .sheet { box-shadow: none; }
 .check { display: flex; align-items: center; gap: 0.55rem; }
 .check input { width: auto; }
 .btn-wa {
@@ -228,6 +240,7 @@
 .sheet-get li { margin: 4px 0; }
 .sheet-empty { color: #8b97ab; }
 .sheet-sum { min-width: 280px; display: grid; gap: 6px; }
+.sheet-disc strong { color: #0d7a5c; }
 .sheet-pending {
   margin-top: 4px;
   padding: 10px 12px;

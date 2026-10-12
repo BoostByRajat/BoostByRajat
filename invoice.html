@@ -49,7 +49,7 @@
     </section>
     <div id="desk" hidden>
     <h1>Invoice banao</h1>
-    <p class="inv-lead">Invoice, quotation, ya demo. Download PDF se file save hoti hai. WhatsApp aur Email se wohi PDF client ko bhej sakte ho. Demo number aur earning mein nahi aata.</p>
+    <p class="inv-lead">Invoice, quotation, ya demo. Generate aur Email client ke email par PDF seedha bhej dete hain. Demo number aur earning mein nahi aata.</p>
     <p class="wa-box no-print" id="waState">WhatsApp API panel Meta approval ke baad message bhejega.</p>
     <div class="inv-layout">
       <form id="invForm" class="inv-panel no-print">
@@ -96,6 +96,14 @@
         <div id="deliverables"></div>
         <button type="button" class="btn btn-ghost btn-sm" id="addDel">+ Deliverable</button>
 
+        <h2>Discount</h2>
+        <p class="muted">Subtotal par lagta hai. GST uske baad.</p>
+        <div class="adv-quick" id="discPick">
+          <button type="button" class="btn btn-ghost btn-sm" id="discAmount" data-mode="amount" aria-pressed="true">₹ Fixed</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="discPercent" data-mode="percent" aria-pressed="false">%</button>
+        </div>
+        <label><span id="discLabel">Discount amount</span><input id="discount" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0" /></label>
+
         <label class="check"><input id="gstOn" type="checkbox" /> GST lagana hai</label>
         <div id="gstFields" class="grid-2" hidden>
           <label>GST %<input id="gstPercent" type="number" min="0" max="100" step="0.01" value="18" /></label>
@@ -115,6 +123,7 @@
         </div>
         <div class="money-box">
           <div><span>Subtotal</span><strong id="mSub">₹0.00</strong></div>
+          <div id="mDiscRow" class="disc-line" hidden><span id="mDiscLabel">Discount</span><strong id="mDisc">₹0.00</strong></div>
           <div id="mGstRow" hidden><span>GST</span><strong id="mGst">₹0.00</strong></div>
           <div><span>Total</span><strong id="mTot">₹0.00</strong></div>
           <div><span>Advance</span><strong id="mAdv">₹0.00</strong></div>
@@ -133,7 +142,7 @@
           <button class="btn btn-ghost btn-sm" id="convertBtn" type="button" hidden>Invoice banao</button>
           <button class="btn btn-ghost btn-sm" id="newBtn" type="button">New</button>
         </div>
-        <p class="muted">Phone par WhatsApp aur Email PDF ke saath share sheet kholte hain. Laptop par PDF download hoti hai aur chat khul jati hai — file attach karke send karo.</p>
+        <p class="muted">Email khud chali jati hai, PDF attach karke. Client ka email form mein hona chahiye. WhatsApp alag button hai.</p>
         <p id="invStatus" class="form-status" hidden></p>
         <a id="openLink" class="inv-link" href="#" hidden>Client link</a>
         <p id="smtpHint" class="muted"></p>
@@ -185,6 +194,7 @@
     </section>
     </div>
   </main>
+  <div id="pdfHost" class="pdf-host" aria-hidden="true"><article class="sheet" id="pdfSheet"></article></div>
   <script type="module" src="/src/invoice.js"></script>
 </body>
 </html>

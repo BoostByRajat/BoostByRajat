@@ -16,6 +16,7 @@ import {
   paymentsOf,
   pdfFileName,
   plusDaysIso,
+  round2,
   shiftMonth,
   todayIso,
   waNumber,
@@ -31,7 +32,14 @@ let loadedCreatedBy = null;
 let items = [{ description: '', qty: 1, rate: 0 }];
 let deliverables = [''];
 let payments = [];
+let discountMode = 'amount';
 let busy = false;
+let pdfReady = null;
+let pdfJob = null;
+let pdfSerial = 0;
+let pdfChain = Promise.resolve();
+let warmTimer = 0;
+let pdfPrimed = false;
 let allInvoices = [];
 let allClients = [];
 let nextNumbers = { invoice: 'BBR-001', demo: 'DEMO-001', quote: 'QT-001' };
@@ -72,6 +80,8 @@ function collect() {
     gstEnabled: $('gstOn').checked,
     gstPercent: Number($('gstPercent').value) || 0,
     gstin: $('gstin').value.trim(),
+    discountMode,
+    discountValue: Number($('discount').value) || 0,
     payments: currentKind === 'quote'
       ? []
       : payments
@@ -93,6 +103,11 @@ function validate(payload) {
   if (!filled.length) throw new Error('Kam se kam ek kaam aur rate likho');
   if (filled.some((item) => item.qty <= 0)) throw new Error('Quantity 0 se zyada honi chahiye');
   const totals = computeTotals(payload);
+  if (totals.discountOverflow) {
+    throw new Error(payload.discountMode === 'percent'
+      ? 'Discount 100% se zyada nahi ho sakta'
+      : 'Discount subtotal se zyada hai');
+  }
   if (totals.advanceOverflow) throw new Error('Advance total se zyada hai');
   return totals;
 }
@@ -204,6 +219,17 @@ function refresh() {
   const derived = deriveStatus(payload, totals);
   $('status').value = derived;
   $('mSub').textContent = formatInr(totals.subtotal);
+  const showDisc = totals.discountAmount > 0 || totals.discountOverflow;
+  $('mDiscRow').hidden = !showDisc;
+  $('mDiscRow').classList.toggle('bad', totals.discountOverflow);
+  $('mDiscLabel').textContent = totals.discountMode === 'percent' && totals.discountPercent
+    ? `Discount ${totals.discountPercent}%`
+    : 'Discount';
+  $('mDisc').textContent = totals.discountAmount > 0 ? `−${formatInr(totals.discountAmount)}` : formatInr(0);
+  $('discAmount').setAttribute('aria-pressed', discountMode === 'amount' ? 'true' : 'false');
+  $('discPercent').setAttribute('aria-pressed', discountMode === 'percent' ? 'true' : 'false');
+  $('discLabel').textContent = discountMode === 'percent' ? 'Discount %' : 'Discount amount';
+  $('discount').max = discountMode === 'percent' ? '100' : '';
   $('mGstRow').hidden = !totals.gstEnabled;
   $('mGst').textContent = formatInr(totals.gstAmount);
   $('mTot').textContent = formatInr(totals.total);
@@ -226,6 +252,7 @@ function refresh() {
   paintSheet($('sheet'), preview, { showEmpty: true });
   fitSheet($('sheetZoom'), $('sheet'));
   $('saveBtn').textContent = currentId ? 'Save' : 'Generate';
+  warmPdf();
 }
 
 function renderPayments() {
@@ -297,6 +324,8 @@ function loadInv(inv) {
   $('gstOn').checked = Boolean(inv.gstEnabled);
   $('gstPercent').value = inv.gstPercent || 18;
   $('gstin').value = inv.gstin || '';
+  discountMode = inv.discountMode === 'percent' ? 'percent' : 'amount';
+  $('discount').value = inv.discountValue ? String(inv.discountValue) : '';
   $('gstFields').hidden = !inv.gstEnabled;
   payments = paymentsOf(inv).map((row) => ({
     amount: row.amount,
@@ -345,6 +374,8 @@ function blankForm(next) {
   $('gstFields').hidden = true;
   $('gstPercent').value = '18';
   $('gstin').value = '';
+  discountMode = 'amount';
+  $('discount').value = '';
   $('upi').value = '';
   $('notes').value = DEFAULT_NOTE;
   $('openLink').hidden = true;
@@ -534,7 +565,7 @@ function renderList(list) {
     mail.type = 'button';
     mail.className = 'btn btn-ghost btn-sm';
     mail.textContent = 'Email';
-    mail.addEventListener('click', () => guarded('Email ke liye PDF ban rahi hai…', () => pushEmail(inv)));
+    mail.addEventListener('click', () => guarded('Mail ja rahi hai…', () => pushEmail(inv)));
     actions.append(pdf, wa, mail);
     const del = document.createElement('button');
     del.type = 'button';
@@ -602,13 +633,15 @@ async function loadList() {
   }
   if (!$('upi').value && data.defaultUpi && !currentId) $('upi').value = data.defaultUpi;
   $('smtpHint').textContent = data.smtp
-    ? 'Gmail connected hai. Generate par client ke email par PDF auto chali jayegi.'
+    ? 'Gmail connected hai. Generate aur Email button client ko PDF seedha bhej dete hain.'
     : 'Gmail connect nahi hai. Render par SMTP_PASS (Gmail app password) set karo, tab Generate par mail apne aap jayegi.';
   return data;
 }
 
 async function saveInvoice(opts = {}) {
   const wasNew = !currentId;
+  const draft = formPreview();
+  if (opts.deliver !== false) ensurePdf(draft);
   const payload = collect();
   const totals = validate(payload);
   const data = await api('/api/invoices/save', payload);
@@ -622,76 +655,43 @@ async function saveInvoice(opts = {}) {
 async function sendGeneratedMail(invoice, force) {
   if (docKind(invoice) === 'demo' && !force) return '';
   const to = String(invoice.client?.email || '').trim();
-  if (!to) return ' Auto mail ke liye client ka email likho.';
+  if (!to) return ' Client ka email likho, tab mail apne aap chali jayegi.';
   if ((invoice.sends || []).some((row) => row.channel === 'email') && !force) return '';
-  try {
-    const file = await makePdf(invoice);
-    const data = await api('/api/invoices/email', {
-      id: invoice.id,
-      pdfBase64: await fileToBase64(file),
-      filename: file.name,
-    });
-    if (data.invoice && currentId === data.invoice.id) loadInv(data.invoice);
-    if (data.sent) return ` PDF ${to} par Gmail se chali gayi.`;
-    if (data.reason === 'no_smtp') return ' Gmail abhi connect nahi hai, auto mail nahi gayi.';
-    return ' Auto mail nahi gayi.';
-  } catch (err) {
-    return ` Auto mail nahi gayi: ${err.message || 'fail'}`;
-  }
+  await postInvoiceEmail(invoice);
+  return ` Mail ${to} par PDF ke saath chali gayi.`;
 }
 
 async function deliverConfirmation(invoice, force) {
-  const mailNote = await sendGeneratedMail(invoice, force);
+  let mailNote = '';
+  try {
+    mailNote = await sendGeneratedMail(invoice, force);
+  } catch (err) {
+    mailNote = ` Mail nahi gayi: ${err.message || 'fail'}`;
+  }
   if (docKind(invoice) === 'demo' && !force) {
-    return ` Demo bill number aur earning mein nahi jodi gayi. WhatsApp automatically nahi gaya.${mailNote}`;
+    return ` Demo bill number aur earning mein nahi jodi gayi.${mailNote}`;
   }
   const quote = docKind(invoice) === 'quote';
   const phone = waNumber(invoice.client?.phone);
-  if (!phone && !quote) return ` Client ka WhatsApp likho, tab order confirmation jayegi.${mailNote}`;
+  if (!phone || quote) return mailNote || ' Save ho gayi.';
   try {
     const snap = await api('/api/invoices/wa-status', {});
-    if (quote && !snap.quoteTemplate) {
-      return ` Quotation save ho gayi. Download PDF, WhatsApp, ya Email se client ko bhej do.${mailNote}`;
-    }
-    if (snap.status !== 'open') {
-      return ` Save ho gayi. WhatsApp button PDF bhej dega — phone par share sheet, laptop par download ke saath chat.${mailNote}`;
-    }
-    let pdfBase64 = '';
-    let filename = '';
-    const wantPdf = quote ? Boolean(snap.quoteDocument) : snap.document !== false;
-    if (wantPdf) {
-      try {
-        const file = await makePdf(invoice);
-        pdfBase64 = await fileToBase64(file);
-        filename = file.name;
-      } catch (err) {
-        console.warn('pdf before whatsapp', err);
-      }
-    }
+    if (snap.status !== 'open') return mailNote || ' Save ho gayi.';
+    const file = await makePdf(invoice);
     const data = await api('/api/invoices/whatsapp', {
       id: invoice.id,
-      pdfBase64,
-      filename,
+      pdfBase64: await fileToBase64(file),
+      filename: file.name,
       force: Boolean(force),
     });
     if (data.invoice) {
       loadInv(data.invoice);
       await loadList();
     }
-    if (data.sent) {
-      return (quote
-        ? ' Quotation WhatsApp se client ko chali gayi.'
-        : ' Order confirmation WhatsApp API se client ko chali gayi.') + mailNote;
-    }
-    if (data.copied && data.text) {
-      try { await navigator.clipboard.writeText(data.text); } catch { /* clipboard optional */ }
-      return ` Message copy ho gaya.${mailNote}`;
-    }
-    if (data.skipped) return ` Demo par WhatsApp automatically nahi bheja.${mailNote}`;
-    if (data.already) return ` Confirmation pehle hi ja chuki hai.${mailNote}`;
-    return ` ${data.error || 'WhatsApp API se message nahi gaya.'}${mailNote}`;
+    if (data.sent) return `${mailNote} WhatsApp se bhi chali gayi.`;
+    return mailNote || ' Save ho gayi.';
   } catch (err) {
-    return ` ${err.message || 'WhatsApp confirmation fail'}${mailNote}`;
+    return `${mailNote} ${err.message || ''}`.trim();
   }
 }
 
@@ -751,12 +751,107 @@ function clientLink(inv) {
   return `${location.origin}/invoice-view.html?t=${encodeURIComponent(inv.token)}`;
 }
 
+function pdfCacheKey(inv) {
+  const client = inv?.client || {};
+  return JSON.stringify({
+    k: docKind(inv),
+    n: inv?.number || '',
+    d: inv?.date || '',
+    due: inv?.dueDate || '',
+    s: inv?.status || '',
+    c: {
+      name: String(client.name || '').trim(),
+      business: String(client.business || '').trim(),
+      phone: String(client.phone || '').replace(/\D/g, ''),
+      email: String(client.email || '').trim().toLowerCase(),
+      city: String(client.city || '').trim(),
+    },
+    items: (inv?.items || [])
+      .filter((item) => String(item.description || '').trim())
+      .map((item) => ({
+        d: String(item.description || '').trim(),
+        q: round2(item.qty),
+        r: round2(item.rate),
+      })),
+    del: (inv?.deliverables || []).map((line) => String(line || '').trim()).filter(Boolean),
+    g: [
+      Boolean(inv?.gstEnabled),
+      round2(inv?.gstPercent),
+      Boolean(inv?.gstEnabled) ? String(inv?.gstin || '').trim().toUpperCase() : '',
+    ],
+    disc: [inv?.discountMode === 'percent' ? 'percent' : 'amount', round2(inv?.discountValue)],
+    pay: paymentsOf(inv),
+    upi: String(inv?.upi || '').trim(),
+    notes: String(inv?.notes || '').trim(),
+    by: inv?.createdBy?.name || '',
+  });
+}
+
+function formPreview() {
+  const payload = collect();
+  const totals = computeTotals(payload);
+  return {
+    ...payload,
+    status: deriveStatus(payload, totals),
+    number: payload.number || $('number').placeholder || 'BBR-NEW',
+    createdBy: loadedCreatedBy || (currentUser ? { name: currentUser.name } : null),
+  };
+}
+
+function runPdf(work) {
+  const job = pdfChain.then(work, work);
+  pdfChain = job.then(() => {}, () => {});
+  return job;
+}
+
+function ensurePdf(inv) {
+  const key = pdfCacheKey(inv);
+  if (pdfReady?.key === key) return Promise.resolve(pdfReady.file);
+  if (pdfJob?.key === key) return pdfJob.promise;
+  const serial = ++pdfSerial;
+  const promise = runPdf(async () => {
+    paintSheet($('pdfSheet'), inv);
+    const file = await elementToPdfFile($('pdfSheet'), pdfFileName(inv.number));
+    if (serial === pdfSerial) pdfReady = { key, file };
+    return file;
+  });
+  pdfJob = { key, promise };
+  promise.finally(() => {
+    if (pdfJob?.promise === promise) pdfJob = null;
+  });
+  return promise;
+}
+
+function warmPdf() {
+  clearTimeout(warmTimer);
+  warmTimer = setTimeout(() => {
+    try {
+      const preview = formPreview();
+      if (preview.client.name.length < 2) return;
+      if (!preview.items.some((item) => String(item.description || '').trim())) return;
+      ensurePdf(preview).catch(() => {});
+    } catch {
+      /* form is not ready yet */
+    }
+  }, 500);
+}
+
+function primePdfEngine() {
+  if (pdfPrimed) return;
+  pdfPrimed = true;
+  runPdf(async () => {
+    $('pdfSheet').textContent = 'BoostByRajat';
+    await elementToPdfFile($('pdfSheet'), 'BoostByRajat-ready.pdf');
+  }).catch(() => {});
+}
+
 async function makePdf(inv) {
-  paintSheet($('sheet'), inv);
-  fitSheet($('sheetZoom'), $('sheet'));
-  const file = await elementToPdfFile($('sheet'), pdfFileName(inv.number));
-  refresh();
-  return file;
+  return ensurePdf(inv);
+}
+
+async function pdfForSaved(draft, invoice) {
+  if (pdfCacheKey(invoice) === pdfCacheKey(draft)) return ensurePdf(draft);
+  return ensurePdf(invoice);
 }
 
 function lock(on) {
@@ -770,7 +865,7 @@ $('invForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   if (busy) return;
   lock(true);
-  setStatus('Bill generate ho rahi hai…');
+  setStatus(wasNew ? 'Bill generate ho rahi hai, mail ja rahi hai…' : 'Bill save ho rahi hai…');
   try {
     const { extra } = await saveInvoice();
     setStatus(`Bill save ho gayi.${extra}`);
@@ -827,7 +922,7 @@ async function handoffPdf(invoice, channel) {
     : 'PDF Downloads folder mein save ho gayi. WhatsApp khul gaya — contact choose karke PDF attach kar do.';
 }
 
-async function pushWhatsApp(invoice) {
+async function pushWhatsApp(invoice, readyFile) {
   const phone = waNumber(invoice.client?.phone);
   let snap = {};
   try {
@@ -838,7 +933,7 @@ async function pushWhatsApp(invoice) {
   const apiReady = snap.status === 'open' && (docKind(invoice) !== 'quote' || snap.quoteTemplate);
   if (apiReady && phone) {
     try {
-      const file = await makePdf(invoice);
+      const file = readyFile || await makePdf(invoice);
       const data = await api('/api/invoices/whatsapp', {
         id: invoice.id,
         pdfBase64: await fileToBase64(file),
@@ -859,30 +954,35 @@ async function pushWhatsApp(invoice) {
   return handoffPdf(invoice, 'whatsapp');
 }
 
-async function pushEmail(invoice) {
-  if (!invoice.client?.email) return 'Client ka email likho, tab PDF mail ho sakti hai.';
-  try {
-    const file = await makePdf(invoice);
-    const data = await api('/api/invoices/email', {
-      id: invoice.id,
-      pdfBase64: await fileToBase64(file),
-      filename: file.name,
-    });
-    if (data.sent) {
-      if (data.invoice && currentId === data.invoice.id) loadInv(data.invoice);
-      await loadList();
-      return `PDF ${invoice.client.email} par chali gayi.`;
-    }
-  } catch (err) {
-    console.warn('email api', err);
+async function postInvoiceEmail(invoice, readyFile) {
+  const file = readyFile || await makePdf(invoice);
+  const data = await api('/api/invoices/email', {
+    id: invoice.id,
+    pdfBase64: await fileToBase64(file),
+    filename: file.name,
+  });
+  if (!data.sent) {
+    throw new Error(data.reason === 'no_smtp'
+      ? 'Gmail connect nahi hai. Mail nahi gayi.'
+      : (data.error || 'Mail nahi gayi.'));
   }
-  return handoffPdf(invoice, 'email');
+  if (data.invoice && currentId === data.invoice.id) loadInv(data.invoice);
+  await loadList();
+  return data;
 }
 
-$('pdfBtn').addEventListener('click', () => guarded('PDF ban rahi hai…', async () => {
+async function pushEmail(invoice, readyFile) {
+  const to = String(invoice.client?.email || '').trim();
+  if (!to) return 'Client ka email likho. Bina email ke mail nahi jayegi.';
+  await postInvoiceEmail(invoice, readyFile);
+  return `Mail ${to} par chali gayi. PDF attach hai.`;
+}
+
+$('pdfBtn').addEventListener('click', () => guarded('PDF ready ho rahi hai…', async () => {
+  const draft = formPreview();
+  ensurePdf(draft);
   const { invoice } = await saveInvoice({ deliver: false });
-  const file = await makePdf(invoice);
-  downloadFile(file);
+  downloadFile(await pdfForSaved(draft, invoice));
   return 'PDF download ho gayi.';
 }));
 
@@ -901,14 +1001,18 @@ $('copyBtn').addEventListener('click', async () => {
   }
 });
 
-$('waBtn').addEventListener('click', () => guarded('WhatsApp ke liye PDF ban rahi hai…', async () => {
+$('waBtn').addEventListener('click', () => guarded('PDF ready ho rahi hai…', async () => {
+  const draft = formPreview();
+  ensurePdf(draft);
   const { invoice } = await saveInvoice({ deliver: false });
-  return pushWhatsApp(invoice);
+  return pushWhatsApp(invoice, await pdfForSaved(draft, invoice));
 }));
 
-$('mailBtn').addEventListener('click', () => guarded('Email ke liye PDF ban rahi hai…', async () => {
+$('mailBtn').addEventListener('click', () => guarded('Mail ja rahi hai…', async () => {
+  const draft = formPreview();
+  ensurePdf(draft);
   const { invoice } = await saveInvoice({ deliver: false });
-  return pushEmail(invoice);
+  return pushEmail(invoice, await pdfForSaved(draft, invoice));
 }));
 
 $('backMain').addEventListener('click', () => {
@@ -969,13 +1073,20 @@ for (const preset of PRESETS) {
   $('presets').appendChild(btn);
 }
 
+for (const id of ['discAmount', 'discPercent']) {
+  $(id).addEventListener('click', () => {
+    discountMode = id === 'discPercent' ? 'percent' : 'amount';
+    refresh();
+  });
+}
+
 $('gstOn').addEventListener('change', () => {
   $('gstFields').hidden = !$('gstOn').checked;
   if ($('gstOn').checked && !$('gstPercent').value) $('gstPercent').value = '18';
   refresh();
 });
 
-for (const id of ['number', 'date', 'due', 'status', 'clientName', 'business', 'phone', 'email', 'city', 'gstPercent', 'gstin', 'upi', 'notes']) {
+for (const id of ['number', 'date', 'due', 'status', 'clientName', 'business', 'phone', 'email', 'city', 'gstPercent', 'gstin', 'discount', 'upi', 'notes']) {
   $(id).addEventListener('input', refresh);
   $(id).addEventListener('change', refresh);
 }
@@ -1142,6 +1253,7 @@ async function enterDesk(user) {
     setStatus(err.message || 'List fail');
   }
   refreshWa();
+  primePdfEngine();
 }
 
 async function login(username, passwordValue) {

@@ -57,6 +57,10 @@ export function paintSheet(sheet, inv, opts = {}) {
   const gstRow = totals.gstEnabled
     ? `<div><span>GST ${esc(String(totals.gstPercent))}%</span><strong>${esc(formatInr(totals.gstAmount))}</strong></div>`
     : '';
+  const discLabel = totals.discountMode === 'percent' ? `Discount ${totals.discountPercent}%` : 'Discount';
+  const discRow = totals.discountAmount > 0
+    ? `<div class="sheet-disc"><span>${esc(discLabel)}</span><strong>− ${esc(formatInr(totals.discountAmount))}</strong></div>`
+    : '';
 
   sheet.innerHTML = `
     <div class="sheet-banner">
@@ -122,6 +126,7 @@ export function paintSheet(sheet, inv, opts = {}) {
       </div>
       <div class="sheet-sum">
         <div><span>Subtotal</span><strong>${esc(formatInr(totals.subtotal))}</strong></div>
+        ${discRow}
         ${gstRow}
         <div><span>Total</span><strong>${esc(formatInr(totals.total))}</strong></div>
         <div><span>${kind === 'quote' ? 'Received' : 'Advance received'}</span><strong>${esc(formatInr(Math.max(0, totals.advance)))}</strong></div>

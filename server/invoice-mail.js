@@ -24,7 +24,7 @@ export function smtpReady() {
   return ready;
 }
 
-export async function sendInvoiceEmail({ to, subject, text, pdfBuffer, filename }) {
+export async function sendInvoiceEmail({ to, subject, text, html, pdfBuffer, filename }) {
   if (!smtpReady()) {
     const err = new Error('SMTP not configured');
     err.code = 'NO_SMTP';
@@ -44,6 +44,7 @@ export async function sendInvoiceEmail({ to, subject, text, pdfBuffer, filename 
     replyTo: clean(process.env.PUBLIC_EMAIL) || user,
     subject,
     text,
+    html: html || undefined,
     attachments: [
       {
         filename,

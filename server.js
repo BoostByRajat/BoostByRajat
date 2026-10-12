@@ -11,7 +11,7 @@ import { clearSessionCookie, loginWithPassword, requestIsSecure, setSessionCooki
 import { convertQuote, deleteInvoice, findById, findByToken, InvoiceError, markCleared, readInvoices, recordSend, saveInvoice } from './server/invoices.js';
 import { listClients, upsertClient } from './server/clients.js';
 import { sendInvoiceEmail, smtpReady } from './server/invoice-mail.js';
-import { clearNoticeText, computeTotals, docKind, dueNoticeText, emailSubject, messageText, nextNumber, orderConfirmationText, quoteMessageText } from './src/invoice-model.js';
+import { clearNoticeText, computeTotals, docKind, dueNoticeText, emailDocument, nextNumber, orderConfirmationText, quoteMessageText } from './src/invoice-model.js';
 import { site } from './src/config.js';
 import { sendNoticeOnWhatsApp, sendOrderOnWhatsApp, waSnapshot } from './server/wa-api.js';
 import { flushStore, pullDeskData } from './server/github-store.js';
@@ -548,10 +548,12 @@ app.post('/api/invoices/email', async (req, res) => {
       .replace(/[^\w.-]+/g, '-')
       .slice(0, 80);
     const link = invoicePublicUrl(req, inv.token);
+    const mail = emailDocument(inv, link, { whatsapp: site.whatsapp, email: site.email });
     await sendInvoiceEmail({
       to: inv.client.email,
-      subject: emailSubject(inv),
-      text: messageText(inv, link, { whatsapp: site.whatsapp, email: site.email }),
+      subject: mail.subject,
+      text: mail.text,
+      html: mail.html,
       pdfBuffer,
       filename: filename.toLowerCase().endsWith('.pdf') ? filename : `${filename}.pdf`,
     });

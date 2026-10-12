@@ -103,6 +103,8 @@ export function saveInvoice(input, user, opts = {}) {
 
   const gstEnabled = Boolean(body.gstEnabled);
   const gstPercent = gstEnabled ? Math.min(100, Math.max(0, round2(body.gstPercent))) : 0;
+  const discountMode = body.discountMode === 'percent' ? 'percent' : 'amount';
+  const discountValue = Math.max(0, round2(body.discountValue));
   const date = isoDate(body.date, existing?.date || todayIso());
   const kind = existing
     ? docKind(existing)
@@ -117,8 +119,13 @@ export function saveInvoice(input, user, opts = {}) {
   }
   if (kind === 'quote') payments = [];
 
-  const draft = { items, gstEnabled, gstPercent, payments };
+  const draft = { items, gstEnabled, gstPercent, payments, discountMode, discountValue };
   const totals = computeTotals(draft);
+  if (totals.discountOverflow) {
+    throw new InvoiceError(discountMode === 'percent'
+      ? 'Discount 100% se zyada nahi ho sakta'
+      : 'Discount subtotal se zyada hai');
+  }
   if (totals.advanceOverflow) throw new InvoiceError('Advance is more than the total');
 
   let number = cleanLine(body.number, 32);
@@ -155,6 +162,8 @@ export function saveInvoice(input, user, opts = {}) {
     deliverables,
     gstEnabled,
     gstPercent,
+    discountMode,
+    discountValue,
     gstin: gstEnabled ? cleanLine(body.gstin, 20).toUpperCase() : '',
     payments,
     advance: totals.advance,
@@ -197,6 +206,8 @@ export function convertQuote(id, user) {
     gstEnabled: quote.gstEnabled,
     gstPercent: quote.gstPercent,
     gstin: quote.gstin,
+    discountMode: quote.discountMode,
+    discountValue: quote.discountValue,
     payments: [],
     upi: quote.upi,
     notes: quote.notes,
