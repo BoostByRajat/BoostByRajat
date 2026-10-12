@@ -45,6 +45,10 @@ services:
         value: "BoostByRajat <rajatbissa16@gmail.com>"
       - key: SMTP_PASS
         sync: false
+      - key: GMAIL_RELAY_URL
+        sync: false
+      - key: GMAIL_RELAY_SECRET
+        sync: false
       - key: VITE_GA_MEASUREMENT_ID
         value: G-H65FJQ44E0
       - key: VITE_GSC_VERIFICATION

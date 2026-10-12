@@ -14,12 +14,18 @@ function smtpUser() {
 
 let logged = false;
 
+function relayReady() {
+  return Boolean(clean(process.env.GMAIL_RELAY_URL) && clean(process.env.GMAIL_RELAY_SECRET));
+}
+
 export function smtpReady() {
   const user = smtpUser();
-  const ready = Boolean(smtpPass() && user);
+  const ready = relayReady() || Boolean(smtpPass() && user);
   if (!logged) {
     logged = true;
-    console.log(ready ? `Gmail SMTP ready for ${user}` : 'Gmail SMTP missing SMTP_PASS');
+    console.log(ready
+      ? (relayReady() ? `Gmail relay ready for ${user || 'rajatbissa16@gmail.com'}` : `Gmail SMTP ready for ${user}`)
+      : 'Gmail SMTP missing SMTP_PASS');
   }
   return ready;
 }
@@ -43,7 +49,54 @@ function transporterFor(port) {
   });
 }
 
+async function postAppsScript(url, body) {
+  const headers = { 'Content-Type': 'text/plain;charset=utf-8' };
+  const first = await fetch(url, {
+    method: 'POST',
+    headers,
+    body,
+    redirect: 'manual',
+    signal: AbortSignal.timeout(20000),
+  });
+  if (first.status >= 300 && first.status < 400) {
+    const loc = first.headers.get('location');
+    if (!loc) return first;
+    return fetch(new URL(loc, url), {
+      method: 'GET',
+      redirect: 'follow',
+      signal: AbortSignal.timeout(20000),
+    });
+  }
+  return first;
+}
+
+async function sendViaRelay({ to, subject, text, html, pdfBuffer, filename }) {
+  const body = JSON.stringify({
+    secret: clean(process.env.GMAIL_RELAY_SECRET),
+    to,
+    subject,
+    text,
+    html,
+    filename,
+    pdfBase64: pdfBuffer.toString('base64'),
+    replyTo: clean(process.env.PUBLIC_EMAIL) || smtpUser() || 'rajatbissa16@gmail.com',
+  });
+  const res = await postAppsScript(clean(process.env.GMAIL_RELAY_URL), body);
+  const raw = await res.text();
+  let data = {};
+  try { data = JSON.parse(raw); } catch { data = {}; }
+  if (data.ok === true) return;
+  console.error('gmail relay', res.status, raw.slice(0, 240));
+  const err = new Error(data.error || 'Gmail se mail nahi gayi.');
+  err.code = 'RELAY';
+  throw err;
+}
+
 export async function sendInvoiceEmail({ to, subject, text, html, pdfBuffer, filename }) {
+  if (relayReady()) {
+    await sendViaRelay({ to, subject, text, html, pdfBuffer, filename });
+    return;
+  }
   if (!smtpReady()) {
     const err = new Error('SMTP not configured');
     err.code = 'NO_SMTP';
