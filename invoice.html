@@ -21,6 +21,7 @@
       <span class="brand-text">Invoice <span>Desk</span></span>
     </a>
     <div class="top-actions">
+      <button type="button" class="btn btn-ghost btn-sm" id="backMain" hidden>← Main</button>
       <span id="whoami" class="who-name" hidden></span>
       <button type="button" class="btn btn-ghost btn-sm" id="logoutBtn" hidden>Logout</button>
       <a class="btn btn-ghost btn-sm" href="/desk.html">Translate</a>
@@ -48,7 +49,7 @@
     </section>
     <div id="desk" hidden>
     <h1>Invoice banao</h1>
-    <p class="inv-lead">Invoice, quotation, ya demo. Asli invoice ki confirmation WhatsApp se jaati hai. Demo number aur earning mein nahi aata. Quotation promotion list mein save hoti hai.</p>
+    <p class="inv-lead">Invoice, quotation, ya demo. Download PDF se file save hoti hai. WhatsApp aur Email se wohi PDF client ko bhej sakte ho. Demo number aur earning mein nahi aata.</p>
     <p class="wa-box no-print" id="waState">WhatsApp API panel Meta approval ke baad message bhejega.</p>
     <div class="inv-layout">
       <form id="invForm" class="inv-panel no-print">
@@ -123,8 +124,8 @@
         <label>Note<textarea id="notes" maxlength="2000"></textarea></label>
         <div class="inv-actions">
           <button class="btn btn-amber btn-sm" id="saveBtn" type="submit">Generate</button>
-          <button class="btn btn-ghost btn-sm" id="pdfBtn" type="button">PDF</button>
-          <button class="btn btn-wa btn-sm" id="waBtn" type="button">Send again</button>
+          <button class="btn btn-ghost btn-sm" id="pdfBtn" type="button">Download PDF</button>
+          <button class="btn btn-wa btn-sm" id="waBtn" type="button">WhatsApp</button>
           <button class="btn btn-mail btn-sm" id="mailBtn" type="button">Email</button>
           <button class="btn btn-ghost btn-sm" id="copyBtn" type="button">Copy message</button>
           <button class="btn btn-ghost btn-sm" id="dueBtn" type="button">Due message</button>
@@ -132,8 +133,9 @@
           <button class="btn btn-ghost btn-sm" id="convertBtn" type="button" hidden>Invoice banao</button>
           <button class="btn btn-ghost btn-sm" id="newBtn" type="button">New</button>
         </div>
+        <p class="muted">Phone par WhatsApp aur Email PDF ke saath share sheet kholte hain. Laptop par PDF download hoti hai aur chat khul jati hai — file attach karke send karo.</p>
         <p id="invStatus" class="form-status" hidden></p>
-        <a id="openLink" class="inv-link" href="#" target="_blank" rel="noopener" hidden>Client link</a>
+        <a id="openLink" class="inv-link" href="#" hidden>Client link</a>
         <p id="smtpHint" class="muted"></p>
       </form>
       <aside class="inv-side">
@@ -158,7 +160,7 @@
       <h2>Date wise</h2>
       <div id="acctDays" class="day-list"></div>
     </section>
-    <section class="inv-list no-print">
+    <section class="inv-list no-print" id="billHistory">
       <div class="acct-head">
         <h2>Bill history</h2>
         <div class="adv-quick">

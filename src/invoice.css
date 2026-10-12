@@ -5,6 +5,7 @@
 }
 .inv-desk [hidden],
 .inv-print-view [hidden] { display: none !important; }
+#billHistory, #invForm { scroll-margin-top: 4.75rem; }
 .login-gate {
   max-width: 24.5rem;
   margin: clamp(2.5rem, 12vh, 6.5rem) auto 0;
@@ -342,6 +343,27 @@
 .btn[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
 .view-wrap { max-width: 860px; margin: 0 auto; padding: 1.2rem 1rem 3rem; }
 .view-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.8rem; }
+.pay-box {
+  display: grid;
+  gap: 0.7rem;
+  margin: 0 0 1rem;
+  padding: 1rem;
+  border-radius: 1.1rem;
+  background: rgba(8, 12, 24, 0.88);
+  border: 1px solid rgba(255, 176, 0, 0.35);
+}
+.pay-box h2 { margin: 0; font-size: 1.15rem; }
+.pay-box p { margin: 0; }
+.pay-picks { display: flex; flex-wrap: wrap; gap: 0.45rem; }
+.pay-amount { display: grid; gap: 0.35rem; max-width: 16rem; }
+.pay-qr-wrap { display: flex; justify-content: flex-start; }
+.pay-qr-wrap canvas {
+  width: 220px;
+  height: 220px;
+  border-radius: 0.8rem;
+  background: #fff;
+}
+.pay-box .btn-amber { justify-self: start; }
 
 @media (min-width: 981px) {
   .inv-side {

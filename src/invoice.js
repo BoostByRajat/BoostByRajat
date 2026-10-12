@@ -20,7 +20,7 @@ import {
   todayIso,
   waNumber,
 } from './invoice-model.js';
-import { downloadFile, elementToPdfFile, fileToBase64 } from './invoice-pdf.js';
+import { downloadFile, elementToPdfFile, fileToBase64, sharePdfFile } from './invoice-pdf.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -320,6 +320,7 @@ function loadInv(inv) {
   renderDeliverables();
   renderPayments();
   refresh();
+  syncBack();
 }
 
 function blankForm(next) {
@@ -351,6 +352,28 @@ function blankForm(next) {
   renderDeliverables();
   renderPayments();
   refresh();
+  syncBack();
+}
+
+function syncBack() {
+  const btn = $('backMain');
+  if (btn) btn.hidden = !currentId;
+}
+
+function showBillList() {
+  document.getElementById('billHistory')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function openBill(inv) {
+  const state = history.state;
+  if (state && state.view === 'bill') {
+    history.replaceState({ view: 'bill', id: inv.id }, '');
+  } else {
+    history.pushState({ view: 'bill', id: inv.id }, '');
+  }
+  loadInv(inv);
+  setStatus(`${inv.number} khul gaya.`);
+  $('invForm')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 async function api(url, body) {
@@ -460,9 +483,7 @@ function renderList(list) {
       : `${formatDate(inv.date)} · total ${formatInr(totals.total)} · mila ${formatInr(totals.advance)} · pending ${formatInr(totals.pending)}${who}`;
     open.append(title, meta);
     open.addEventListener('click', () => {
-      loadInv(inv);
-      setStatus(`${inv.number} khul gaya.`);
-      $('clientName').focus();
+      openBill(inv);
     });
     const actions = document.createElement('div');
     actions.className = 'inv-card-actions';
@@ -473,8 +494,7 @@ function renderList(list) {
       convert.textContent = linked ? 'Invoice kholo' : 'Invoice banao';
       convert.addEventListener('click', () => {
         if (linked) {
-          loadInv(linked);
-          setStatus(`${linked.number} khul gaya.`);
+          openBill(linked);
           return;
         }
         convertQuote(inv.id);
@@ -496,6 +516,26 @@ function renderList(list) {
       clear.addEventListener('click', () => sendNotice(inv, 'clear'));
       actions.appendChild(clear);
     }
+    const pdf = document.createElement('button');
+    pdf.type = 'button';
+    pdf.className = 'btn btn-ghost btn-sm';
+    pdf.textContent = 'PDF';
+    pdf.addEventListener('click', () => guarded('PDF ban rahi hai…', async () => {
+      const file = await makePdf(inv);
+      downloadFile(file);
+      return 'PDF download ho gayi.';
+    }));
+    const wa = document.createElement('button');
+    wa.type = 'button';
+    wa.className = 'btn btn-wa btn-sm';
+    wa.textContent = 'WhatsApp';
+    wa.addEventListener('click', () => guarded('WhatsApp ke liye PDF ban rahi hai…', () => pushWhatsApp(inv)));
+    const mail = document.createElement('button');
+    mail.type = 'button';
+    mail.className = 'btn btn-ghost btn-sm';
+    mail.textContent = 'Email';
+    mail.addEventListener('click', () => guarded('Email ke liye PDF ban rahi hai…', () => pushEmail(inv)));
+    actions.append(pdf, wa, mail);
     const del = document.createElement('button');
     del.type = 'button';
     del.className = 'btn btn-ghost btn-sm';
@@ -562,12 +602,12 @@ async function loadList() {
   }
   if (!$('upi').value && data.defaultUpi && !currentId) $('upi').value = data.defaultUpi;
   $('smtpHint').textContent = data.smtp
-    ? 'Email PDF seedha client ke inbox mein ja sakti hai.'
-    : 'SMTP set nahi hai — email pe PDF download hogi, Gmail khulega, attach karke bhej dena. Message mein client link hoga.';
+    ? 'Email PDF seedha client ke inbox mein ja sakti hai. WhatsApp phone par share sheet kholta hai, laptop par PDF download karke chat kholta hai.'
+    : 'Email pe PDF download hogi aur mail khulegi — attach karke bhej dena. WhatsApp bhi PDF ke saath khulega.';
   return data;
 }
 
-async function saveInvoice() {
+async function saveInvoice(opts = {}) {
   const wasNew = !currentId;
   const payload = collect();
   const totals = validate(payload);
@@ -575,7 +615,7 @@ async function saveInvoice() {
   loadInv(data.invoice);
   await loadList();
   let extra = payload.deliverables.length ? '' : ' Deliverables khali hain — client ko kya milega woh likh do.';
-  if (wasNew) extra += await deliverConfirmation(data.invoice, false);
+  if (wasNew && opts.deliver !== false) extra += await deliverConfirmation(data.invoice, false);
   return { invoice: data.invoice, totals, extra };
 }
 
@@ -589,19 +629,10 @@ async function deliverConfirmation(invoice, force) {
   try {
     const snap = await api('/api/invoices/wa-status', {});
     if (quote && !snap.quoteTemplate) {
-      const data = await api('/api/invoices/whatsapp', { id: invoice.id, force: Boolean(force) });
-      if (data.invoice) {
-        loadInv(data.invoice);
-        await loadList();
-      }
-      if (data.text) {
-        try { await navigator.clipboard.writeText(data.text); } catch { /* clipboard optional */ }
-      }
-      if (data.already) return ' Quotation pehle issue ho chuki hai. Message dubara copy karne ke liye Send again dabao.';
-      return ' Quotation save ho gayi. WhatsApp template abhi nahi hai, message copy ho gaya.';
+      return ' Quotation save ho gayi. Download PDF, WhatsApp, ya Email se client ko bhej do.';
     }
     if (snap.status !== 'open') {
-      return ' WhatsApp API abhi Meta approval par hai. Number link karne ki zarurat nahi — panel connect hote hi confirmation jayegi.';
+      return ' Save ho gayi. WhatsApp button PDF bhej dega — phone par share sheet, laptop par download ke saath chat.';
     }
     let pdfBase64 = '';
     let filename = '';
@@ -729,27 +760,115 @@ $('invForm').addEventListener('submit', async (e) => {
   }
 });
 
-$('pdfBtn').addEventListener('click', async () => {
+function openExternal(url) {
+  const opened = window.open(url, '_blank', 'noopener');
+  if (!opened) window.location.href = url;
+}
+
+async function guarded(pending, work) {
   if (busy) return;
   lock(true);
-  setStatus('PDF ban rahi hai…');
+  setStatus(pending);
   try {
-    const { invoice } = await saveInvoice();
-    const file = await makePdf(invoice);
-    downloadFile(file);
-    setStatus('PDF download ho gayi.');
+    const msg = await work();
+    if (msg) setStatus(msg);
   } catch (err) {
-    setStatus(err.message || 'PDF fail');
+    setStatus(err.message || 'Fail');
   } finally {
     lock(false);
   }
-});
+}
+
+async function handoffPdf(invoice, channel) {
+  const file = await makePdf(invoice);
+  const text = messageText(invoice, clientLink(invoice), vendor());
+  const title = emailSubject(invoice);
+  const shared = await sharePdfFile(file, { title, text });
+  if (shared === 'shared') {
+    return channel === 'email'
+      ? 'Share sheet khul gayi. Gmail choose karke PDF bhej do.'
+      : 'Share sheet khul gayi. WhatsApp choose karke PDF bhej do.';
+  }
+  if (shared === 'cancel') return channel === 'email' ? 'Email share cancel ho gaya.' : 'WhatsApp share cancel ho gaya.';
+  if (channel === 'email') {
+    const href = `mailto:${invoice.client.email}?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(text)}`;
+    window.location.href = href;
+    return 'PDF Downloads folder mein save ho gayi. Email khul gayi — PDF attach karke send karo.';
+  }
+  const phone = waNumber(invoice.client?.phone);
+  const url = phone
+    ? `https://wa.me/${phone}?text=${encodeURIComponent(text)}`
+    : `https://wa.me/?text=${encodeURIComponent(text)}`;
+  openExternal(url);
+  return phone
+    ? 'PDF Downloads folder mein save ho gayi. WhatsApp khul gaya — paperclip se PDF attach karke bhej do.'
+    : 'PDF Downloads folder mein save ho gayi. WhatsApp khul gaya — contact choose karke PDF attach kar do.';
+}
+
+async function pushWhatsApp(invoice) {
+  const phone = waNumber(invoice.client?.phone);
+  let snap = {};
+  try {
+    snap = await api('/api/invoices/wa-status', {});
+  } catch {
+    snap = {};
+  }
+  const apiReady = snap.status === 'open' && (docKind(invoice) !== 'quote' || snap.quoteTemplate);
+  if (apiReady && phone) {
+    try {
+      const file = await makePdf(invoice);
+      const data = await api('/api/invoices/whatsapp', {
+        id: invoice.id,
+        pdfBase64: await fileToBase64(file),
+        filename: file.name,
+        force: true,
+      });
+      if (data.invoice && currentId === data.invoice.id) loadInv(data.invoice);
+      if (data.sent) {
+        await loadList();
+        return docKind(invoice) === 'quote'
+          ? 'Quotation PDF WhatsApp se client ko chali gayi.'
+          : 'Bill PDF WhatsApp se client ko chali gayi.';
+      }
+    } catch (err) {
+      console.warn('whatsapp api', err);
+    }
+  }
+  return handoffPdf(invoice, 'whatsapp');
+}
+
+async function pushEmail(invoice) {
+  if (!invoice.client?.email) return 'Client ka email likho, tab PDF mail ho sakti hai.';
+  try {
+    const file = await makePdf(invoice);
+    const data = await api('/api/invoices/email', {
+      id: invoice.id,
+      pdfBase64: await fileToBase64(file),
+      filename: file.name,
+    });
+    if (data.sent) {
+      if (data.invoice && currentId === data.invoice.id) loadInv(data.invoice);
+      await loadList();
+      return `PDF ${invoice.client.email} par chali gayi.`;
+    }
+  } catch (err) {
+    console.warn('email api', err);
+  }
+  return handoffPdf(invoice, 'email');
+}
+
+$('pdfBtn').addEventListener('click', () => guarded('PDF ban rahi hai…', async () => {
+  const { invoice } = await saveInvoice({ deliver: false });
+  const file = await makePdf(invoice);
+  downloadFile(file);
+  return 'PDF download ho gayi.';
+}));
 
 $('copyBtn').addEventListener('click', async () => {
   if (busy) return;
   lock(true);
   try {
-    const { invoice } = await saveInvoice();
+    const { invoice } = await saveInvoice({ deliver: false });
     const text = messageText(invoice, clientLink(invoice), vendor());
     await navigator.clipboard.writeText(text);
     setStatus('Message copy ho gaya. WhatsApp chat mein paste kar do.');
@@ -760,70 +879,26 @@ $('copyBtn').addEventListener('click', async () => {
   }
 });
 
-$('waBtn').addEventListener('click', async () => {
-  if (busy) return;
-  lock(true);
-  setStatus('Order confirmation bhej rahe hain…');
-  try {
-    const wasNew = !currentId;
-    const { invoice, extra } = await saveInvoice();
-    if (wasNew) {
-      setStatus(extra.trim());
-      return;
-    }
-    setStatus((await deliverConfirmation(invoice, true)).trim());
-  } catch (err) {
-    setStatus(err.message || 'WhatsApp fail');
-  } finally {
-    lock(false);
+$('waBtn').addEventListener('click', () => guarded('WhatsApp ke liye PDF ban rahi hai…', async () => {
+  const { invoice } = await saveInvoice({ deliver: false });
+  return pushWhatsApp(invoice);
+}));
+
+$('mailBtn').addEventListener('click', () => guarded('Email ke liye PDF ban rahi hai…', async () => {
+  const { invoice } = await saveInvoice({ deliver: false });
+  return pushEmail(invoice);
+}));
+
+$('backMain').addEventListener('click', () => {
+  if (history.state && history.state.view === 'bill') {
+    history.back();
+    return;
   }
+  showBillList();
 });
 
-$('mailBtn').addEventListener('click', async () => {
-  if (busy) return;
-  lock(true);
-  setStatus('Email ke liye PDF ban rahi hai…');
-  try {
-    const { invoice } = await saveInvoice();
-    if (!invoice.client.email) throw new Error('Client ka email likho');
-    const file = await makePdf(invoice);
-    const text = messageText(invoice, clientLink(invoice), vendor());
-    const data = await api('/api/invoices/email', {
-      id: invoice.id,
-      pdfBase64: await fileToBase64(file),
-      filename: file.name,
-    });
-    if (data.sent) {
-      loadInv(data.invoice);
-      await loadList();
-      setStatus(`PDF ${invoice.client.email} par chali gayi.`);
-      return;
-    }
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      try {
-        await navigator.share({
-          files: [file],
-          title: emailSubject(invoice),
-          text,
-        });
-        setStatus('Share sheet khul gayi. Gmail choose karke PDF bhej do.');
-        return;
-      } catch (err) {
-        if (err?.name === 'AbortError') {
-          setStatus('Email share cancel ho gaya.');
-          return;
-        }
-      }
-    }
-    downloadFile(file);
-    const href = `mailto:${invoice.client.email}?subject=${encodeURIComponent(emailSubject(invoice))}&body=${encodeURIComponent(text)}`;
-    window.location.href = href;
-    setStatus('PDF download ho gayi aur email app khul gayi. PDF attach karke send karo. Message mein invoice link hai.');
-  } catch (err) {
-    setStatus(err.message || 'Email fail');
-  } finally {
-    lock(false);
-  }
+window.addEventListener('popstate', () => {
+  showBillList();
 });
 
 $('newBtn').addEventListener('click', async () => {

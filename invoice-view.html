@@ -16,20 +16,36 @@
     <div class="vignette"></div>
   </div>
   <header class="topbar no-print">
-    <a class="brand-lockup" href="/">
+    <a class="brand-lockup" href="/invoice.html">
       <img src="/brand/logo.png" alt="BoostByRajat" class="brand-logo" width="44" height="44" />
       <span class="brand-text">Boost<span>By</span>Rajat</span>
     </a>
+    <a class="btn btn-ghost btn-sm" href="/invoice.html">← Main</a>
   </header>
   <main class="view-wrap">
     <div class="view-actions no-print">
-      <a class="btn btn-amber btn-sm" id="payBtn" href="#" hidden>Pay on UPI</a>
+      <button type="button" class="btn btn-amber btn-sm" id="payJump" hidden>Pay on UPI</button>
       <button type="button" class="btn btn-ghost btn-sm" id="pdfBtn">Download PDF</button>
+      <button type="button" class="btn btn-wa btn-sm" id="shareBtn" type="button">WhatsApp / Email</button>
       <button type="button" class="btn btn-ghost btn-sm" onclick="window.print()">Print</button>
-      <a class="btn btn-wa btn-sm" id="waBtn" href="#" target="_blank" rel="noopener">WhatsApp BoostByRajat</a>
+      <a class="btn btn-ghost btn-sm" id="waBtn" href="#" target="_blank" rel="noopener">Message BoostByRajat</a>
     </div>
     <p id="docNote" class="muted no-print" hidden></p>
     <p id="viewStatus" class="form-status no-print">Invoice khul rahi hai…</p>
+    <section id="payBox" class="pay-box no-print" hidden>
+      <h2>UPI payment</h2>
+      <p id="payLead"></p>
+      <div class="pay-picks" id="payPicks"></div>
+      <label class="pay-amount">Amount
+        <input id="payAmount" type="number" inputmode="decimal" min="1" step="0.01" />
+      </label>
+      <p id="payHint" class="muted"></p>
+      <div class="pay-qr-wrap">
+        <canvas id="payQr" width="220" height="220" hidden></canvas>
+      </div>
+      <p id="payUpi" class="muted"></p>
+      <a class="btn btn-amber btn-sm" id="payBtn" href="#" hidden>Pay on UPI</a>
+    </section>
     <div class="sheet-zoom" id="sheetZoom" hidden>
       <article class="sheet" id="sheet"></article>
     </div>

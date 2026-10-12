@@ -68,6 +68,28 @@ export function downloadFile(file) {
   setTimeout(() => URL.revokeObjectURL(url), 4000);
 }
 
+function phoneCanShareFiles() {
+  const mobile = navigator.maxTouchPoints > 0 || /Android|iPhone|iPad/i.test(navigator.userAgent);
+  return mobile;
+}
+
+export async function sharePdfFile(file, { title, text } = {}) {
+  if (phoneCanShareFiles() && navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({
+        files: [file],
+        title: title || file.name,
+        text: text || '',
+      });
+      return 'shared';
+    } catch (err) {
+      if (err?.name === 'AbortError') return 'cancel';
+    }
+  }
+  downloadFile(file);
+  return 'download';
+}
+
 export async function fileToBase64(file) {
   const bytes = new Uint8Array(await file.arrayBuffer());
   let binary = '';

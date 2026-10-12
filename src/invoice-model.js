@@ -180,17 +180,38 @@ export function nextNumber(list, kind = 'invoice') {
   return `${prefix}-${String(max + 1).padStart(3, '0')}`;
 }
 
-export function upiPayUrl(inv) {
+export function payChoices(inv) {
+  const pa = String(inv?.upi || '').trim();
+  const totals = computeTotals(inv);
+  const pending = Math.max(0, totals.pending);
+  if (!pa || pending <= 0) return null;
+  const total = Math.max(0, totals.total);
+  const part = (ratio) => Math.min(pending, round2((total * ratio) / 100));
+  return {
+    upi: pa,
+    pending,
+    total,
+    parts: [
+      { id: '25', label: '25%', amount: part(25) },
+      { id: '50', label: '50%', amount: part(50) },
+      { id: '100', label: 'Full', amount: pending },
+    ].filter((row) => row.amount > 0),
+  };
+}
+
+export function upiPayUrl(inv, amount, note) {
   const pa = String(inv?.upi || '').trim();
   if (!pa) return '';
-  const due = Math.max(0, computeTotals(inv).pending);
-  if (due <= 0) return '';
+  const pending = Math.max(0, computeTotals(inv).pending);
+  const am = round2(Number(amount));
+  if (!(am > 0) || am - pending > 0.009) return '';
   const params = new URLSearchParams({
     pa,
     pn: 'BoostByRajat',
-    am: due.toFixed(2),
+    am: am.toFixed(2),
+    mam: '1.00',
     cu: 'INR',
-    tn: String(inv?.number || 'BoostByRajat').slice(0, 50),
+    tn: String(note || inv?.number || 'BoostByRajat').slice(0, 50),
   });
   return `upi://pay?${params.toString()}`;
 }
