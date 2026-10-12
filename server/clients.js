@@ -1,30 +1,14 @@
 import crypto from 'crypto';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import { dataFile, readJsonArray, writeJson } from './data-dir.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const dataDir = path.join(__dirname, '..', 'data');
-const file = path.join(dataDir, 'clients.json');
-
-function ensureStore() {
-  if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
-  if (!fs.existsSync(file)) fs.writeFileSync(file, '[]\n', 'utf8');
-}
+const file = dataFile('clients.json');
 
 function readClients() {
-  ensureStore();
-  try {
-    const parsed = JSON.parse(fs.readFileSync(file, 'utf8'));
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
+  return readJsonArray(file);
 }
 
 function writeClients(list) {
-  ensureStore();
-  fs.writeFileSync(file, JSON.stringify(list, null, 2) + '\n', 'utf8');
+  writeJson(file, list);
 }
 
 function clean(value, max) {

@@ -1,37 +1,19 @@
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import { dataFile, readJsonArray, writeJson } from './data-dir.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const dataDir = path.join(__dirname, '..', 'data');
-const leadsFile = path.join(dataDir, 'leads.json');
-
-function ensureStore() {
-  if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
-  if (!fs.existsSync(leadsFile)) fs.writeFileSync(leadsFile, '[]\n', 'utf8');
-}
+const leadsFile = dataFile('leads.json');
 
 export function readLeads() {
-  ensureStore();
-  try {
-    const raw = fs.readFileSync(leadsFile, 'utf8');
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
+  return readJsonArray(leadsFile);
 }
 
 export function addLead(lead) {
-  ensureStore();
   const list = readLeads();
   list.unshift(lead);
-  fs.writeFileSync(leadsFile, JSON.stringify(list, null, 2) + '\n', 'utf8');
+  writeJson(leadsFile, list);
   return lead;
 }
 
 export function upsertQuotationLead(lead) {
-  ensureStore();
   const quoteId = String(lead?.quoteId || '').trim();
   if (!quoteId) return null;
   const list = readLeads();
@@ -57,6 +39,6 @@ export function upsertQuotationLead(lead) {
   } else {
     list.unshift(row);
   }
-  fs.writeFileSync(leadsFile, JSON.stringify(list, null, 2) + '\n', 'utf8');
+  writeJson(leadsFile, list);
   return row;
 }

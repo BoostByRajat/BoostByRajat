@@ -1,7 +1,4 @@
 import crypto from 'crypto';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import {
   computeTotals,
   deriveStatus,
@@ -12,10 +9,9 @@ import {
   round2,
   todayIso,
 } from '../src/invoice-model.js';
+import { dataFile, readJsonArray, writeJson } from './data-dir.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const dataDir = path.join(__dirname, '..', 'data');
-const file = path.join(dataDir, 'invoices.json');
+const file = dataFile('invoices.json');
 
 export class InvoiceError extends Error {
   constructor(message, status = 400) {
@@ -24,24 +20,12 @@ export class InvoiceError extends Error {
   }
 }
 
-function ensureStore() {
-  if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
-  if (!fs.existsSync(file)) fs.writeFileSync(file, '[]\n', 'utf8');
-}
-
 export function readInvoices() {
-  ensureStore();
-  try {
-    const parsed = JSON.parse(fs.readFileSync(file, 'utf8'));
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
+  return readJsonArray(file);
 }
 
 function writeInvoices(list) {
-  ensureStore();
-  fs.writeFileSync(file, JSON.stringify(list, null, 2) + '\n', 'utf8');
+  writeJson(file, list);
 }
 
 function cleanLine(value, max) {

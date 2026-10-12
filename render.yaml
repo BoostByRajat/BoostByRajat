@@ -2,9 +2,14 @@ services:
   - type: web
     name: boostbyrajat
     runtime: node
-    plan: free
+    # Free instances wipe the disk on every deploy. Starter can keep /var/data.
+    plan: starter
     buildCommand: npm install && npm run build
     startCommand: npm start
+    disk:
+      name: bbr-desk
+      mountPath: /var/data
+      sizeGB: 1
     envVars:
       - key: NODE_ENV
         value: production
@@ -24,3 +29,9 @@ services:
         value: rajatbissa16@gmail.com
       - key: PUBLIC_SITE_URL
         value: https://www.boostbyrajat.co.in
+      - key: DATA_DIR
+        value: /var/data
+      - key: VITE_GA_MEASUREMENT_ID
+        value: G-H65FJQ44E0
+      - key: VITE_GSC_VERIFICATION
+        value: QFW5XG3zc0n2irgNVCW5eMlRx6plJE1agwFd8XPGeU0
