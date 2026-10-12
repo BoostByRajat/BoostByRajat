@@ -31,6 +31,10 @@ services:
         value: https://www.boostbyrajat.co.in
       - key: DATA_DIR
         value: /var/data
+      - key: GITHUB_DATA_REPO
+        value: BoostByRajat/bbr-desk-data
+      - key: GITHUB_DATA_TOKEN
+        sync: false
       - key: SMTP_HOST
         value: smtp.gmail.com
       - key: SMTP_PORT

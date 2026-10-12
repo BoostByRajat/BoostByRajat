@@ -14,6 +14,7 @@ import { sendInvoiceEmail, smtpReady } from './server/invoice-mail.js';
 import { clearNoticeText, computeTotals, docKind, dueNoticeText, emailSubject, messageText, nextNumber, orderConfirmationText, quoteMessageText } from './src/invoice-model.js';
 import { site } from './src/config.js';
 import { sendNoticeOnWhatsApp, sendOrderOnWhatsApp, waSnapshot } from './server/wa-api.js';
+import { flushStore, pullDeskData } from './server/github-store.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 5173;
@@ -23,6 +24,17 @@ const isProd =
 const siteOrigin = String(process.env.PUBLIC_SITE_URL || site.url).replace(/\/$/, '');
 
 const app = express();
+
+app.use((req, res, next) => {
+  const send = res.json.bind(res);
+  res.json = (body) => flushStore().then(() => send(body)).catch((err) => {
+    console.error('desk github save', err.message);
+    if (res.headersSent) return;
+    res.status(502);
+    return send({ error: 'Bill GitHub par save nahi hui. Dubara try karo.' });
+  });
+  next();
+});
 app.use(cors());
 app.use(express.json({ limit: '8mb' }));
 
@@ -33,6 +45,11 @@ app.use((req, res, next) => {
     .trim()
     .toLowerCase()
     .replace(/:\d+$/, '');
+  const canonicalHost = 'www.boostbyrajat.co.in';
+  if (host === 'boostbyrajat.co.in') {
+    res.redirect(301, new URL(req.originalUrl, `https://${canonicalHost}/`).toString());
+    return;
+  }
   if (!host.endsWith('.onrender.com') || req.path.startsWith('/api/')) return next();
   res.redirect(301, new URL(req.originalUrl, `${siteOrigin}/`).toString());
 });
@@ -609,6 +626,7 @@ async function start() {
     next(err);
   });
 
+  await pullDeskData();
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`BoostByRajat → http://0.0.0.0:${PORT}`);
   });

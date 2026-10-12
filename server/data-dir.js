@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { queueGithubSave } from './github-store.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 let logged = false;
@@ -42,4 +43,5 @@ export function writeJson(file, value) {
   const tmp = `${file}.${process.pid}.tmp`;
   fs.writeFileSync(tmp, text, 'utf8');
   fs.renameSync(tmp, file);
+  queueGithubSave(path.basename(file), text);
 }
