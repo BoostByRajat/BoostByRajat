@@ -27,6 +27,7 @@ async function gh(path, { method = 'GET', body } = {}) {
       'X-GitHub-Api-Version': '2022-11-28',
     },
     body: body ? JSON.stringify(body) : undefined,
+    signal: AbortSignal.timeout(12000),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {

@@ -27,12 +27,19 @@ const app = express();
 
 app.use((req, res, next) => {
   const send = res.json.bind(res);
-  res.json = (body) => flushStore().then(() => send(body)).catch((err) => {
-    console.error('desk github save', err.message);
-    if (res.headersSent) return;
-    res.status(502);
-    return send({ error: 'Bill GitHub par save nahi hui. Dubara try karo.' });
-  });
+  res.json = (body) => {
+    const finish = () => {
+      if (res.headersSent) return;
+      return send(body);
+    };
+    return Promise.race([
+      flushStore(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('GitHub save timeout')), 12000)),
+    ]).then(finish).catch((err) => {
+      console.error('desk github save', err.message);
+      return finish();
+    });
+  };
   next();
 });
 app.use(cors());
@@ -561,6 +568,9 @@ app.post('/api/invoices/email', async (req, res) => {
     res.json({ ok: true, sent: true, invoice });
   } catch (err) {
     if (err.code === 'NO_SMTP') return res.json({ ok: true, sent: false, reason: 'no_smtp' });
+    if (err.code === 'SMTP_TIMEOUT') {
+      return res.status(504).json({ error: 'Gmail connection timeout. Mail nahi gayi. Thodi der baad Email dubara dabao.' });
+    }
     const status = err instanceof InvoiceError ? err.status : 500;
     if (status === 500) console.error('invoice email', err);
     res.status(status).json({ error: err.message || 'Email failed' });

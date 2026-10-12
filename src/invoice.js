@@ -408,19 +408,31 @@ function openBill(inv) {
 }
 
 async function api(url, body) {
-  const res = await fetch(url, {
-    method: 'POST',
-    credentials: 'same-origin',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body || {}),
-  });
-  const data = await res.json().catch(() => ({}));
-  if (res.status === 401) {
-    endSession(data.error || 'Login khatam. Dubara login karo.');
-    throw new Error(data.error || 'Login required');
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 40000);
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body || {}),
+      signal: ctrl.signal,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.status === 401) {
+      endSession(data.error || 'Login khatam. Dubara login karo.');
+      throw new Error(data.error || 'Login required');
+    }
+    if (!res.ok) throw new Error(data.error || 'Request failed');
+    return data;
+  } catch (err) {
+    if (err?.name === 'AbortError') {
+      throw new Error('Connection timeout. Screen unlock ho gayi. Email dubara dabao.');
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
   }
-  if (!res.ok) throw new Error(data.error || 'Request failed');
-  return data;
 }
 
 function renderClientPick() {
@@ -954,8 +966,15 @@ async function pushWhatsApp(invoice, readyFile) {
   return handoffPdf(invoice, 'whatsapp');
 }
 
+function within(promise, ms, message) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(message)), ms)),
+  ]);
+}
+
 async function postInvoiceEmail(invoice, readyFile) {
-  const file = readyFile || await makePdf(invoice);
+  const file = readyFile || await within(makePdf(invoice), 20000, 'PDF ready nahi hui. Email dubara dabao.');
   const data = await api('/api/invoices/email', {
     id: invoice.id,
     pdfBase64: await fileToBase64(file),
