@@ -53,7 +53,8 @@
             { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Website development", "url": "https://www.boostbyrajat.co.in/products/websites.html" } },
             { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "App development", "url": "https://www.boostbyrajat.co.in/products/apps.html" } },
             { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Instagram handling", "url": "https://www.boostbyrajat.co.in/products/instagram.html" } },
-            { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Ads management", "url": "https://www.boostbyrajat.co.in/products/ads.html" } }
+            { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Ads management", "url": "https://www.boostbyrajat.co.in/products/ads.html" } },
+            { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Bulk WhatsApp marketing", "url": "https://www.boostbyrajat.co.in/products/whatsapp.html" } }
           ]
         }
       },
@@ -102,6 +103,11 @@
             "@type": "Question",
             "name": "How much is monthly Instagram handling?",
             "acceptedAnswer": { "@type": "Answer", "text": "Basic is ₹4,999/month for 8 posts, Standard is ₹7,999 for 12 posts, and Growth is ₹12,999 for 15 posts. Reels and ad spend are extra." }
+          },
+          {
+            "@type": "Question",
+            "name": "What does bulk WhatsApp marketing cost?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Setup is ₹5,000 once. The panel is ₹3,000/month and includes 500 promo messages. Extra promo is ₹1.50. Booking or OTP updates are ₹0.30. Meta's own message fee is separate and is paid on the client's WhatsApp account." }
           }
         ]
       }
@@ -128,6 +134,7 @@
       <a href="/products/apps.html">Apps</a>
       <a href="/products/instagram.html">Instagram</a>
       <a href="/products/ads.html">Ads</a>
+      <a href="/products/whatsapp.html">WhatsApp</a>
       <a href="/collect.html">Offers</a>
       <a href="/invoice.html">Invoices</a>
       <a href="#order" data-i18n="nav_order">Order</a>
@@ -150,6 +157,7 @@
     <a href="/products/apps.html">Apps</a>
     <a href="/products/instagram.html">Instagram</a>
     <a href="/products/ads.html">Ads</a>
+    <a href="/products/whatsapp.html">WhatsApp</a>
     <p class="drawer-label">More</p>
     <a href="/collect.html">Get offers</a>
     <a href="#pricing">Pricing</a>
@@ -187,8 +195,8 @@
 
     <div class="marquee" aria-hidden="true">
       <div class="marquee-track">
-        <span>Websites</span><span>Apps</span><span>Instagram</span><span>Ad Runs</span><span>AI Translate</span><span>Worldwide</span>
-        <span>Websites</span><span>Apps</span><span>Instagram</span><span>Ad Runs</span><span>AI Translate</span><span>Worldwide</span>
+        <span>Websites</span><span>Apps</span><span>Instagram</span><span>Ad Runs</span><span>WhatsApp Marketing</span><span>Worldwide</span>
+        <span>Websites</span><span>Apps</span><span>Instagram</span><span>Ad Runs</span><span>WhatsApp Marketing</span><span>Worldwide</span>
       </div>
     </div>
 
@@ -281,13 +289,13 @@
           </div>
           <span class="svc-go">→</span>
         </a>
-        <a class="svc-row" href="#order" data-service="panel">
+        <a class="svc-row" href="/products/whatsapp.html" data-service="panel">
           <span class="svc-num">05</span>
           <div>
-            <h3 data-i18n="svc_send_title">WhatsApp panel</h3>
-            <p data-i18n="svc_send_desc">BBR Send. Setup ₹5,000 once, then ₹3,000/month. Your client logs in and messages go from their own WhatsApp.</p>
+            <h3 data-i18n="svc_send_title">Bulk WhatsApp marketing</h3>
+            <p data-i18n="svc_send_desc">BBR Send. Setup ₹5,000 once, then ₹3,000/month with 500 promo messages. Extra promo ₹1.50. Messages go from their own WhatsApp.</p>
           </div>
-          <span class="svc-go">Book</span>
+          <span class="svc-go">→</span>
         </a>
       </div>
     </section>
@@ -375,6 +383,45 @@
           </article>
         </div>
         <p class="price-note" data-i18n="insta_note">Reels / daily stories not included in these plans. Ads are separate.</p>
+      </div>
+
+      <div class="rate-block" id="whatsapp-rates">
+        <h3 class="rate-heading" data-i18n="rate_wa_title">Bulk WhatsApp marketing</h3>
+        <p class="rate-intro" data-i18n="rate_wa_intro">Official WhatsApp campaigns from the client's own number, through the BBR Send panel. Meta approves the message template before it sends.</p>
+        <div class="price-grid">
+          <article class="price-card">
+            <p class="price-tag" data-i18n="wa_setup_tag">Setup</p>
+            <p class="price-amount">₹5,000</p>
+            <ul>
+              <li data-i18n="wa_setup_a">One-time panel setup</li>
+              <li data-i18n="wa_setup_b">Client login for one business</li>
+              <li data-i18n="wa_setup_c">Help connecting their WhatsApp number</li>
+            </ul>
+            <a class="btn btn-ghost btn-sm wa-offer" href="#order" data-service="panel" data-i18n="price_cta">Get quote</a>
+          </article>
+          <article class="price-card featured">
+            <p class="price-badge" data-i18n="price_popular">Most booked</p>
+            <p class="price-tag" data-i18n="wa_month_tag">Monthly panel</p>
+            <p class="price-amount">₹3,000<span data-i18n="per_month">/mo</span></p>
+            <ul>
+              <li data-i18n="wa_month_a">1 WhatsApp number</li>
+              <li data-i18n="wa_month_b">Contact list, campaign, and report</li>
+              <li data-i18n="wa_month_c">500 promo messages included</li>
+            </ul>
+            <a class="btn btn-amber btn-sm" href="/products/whatsapp.html" data-i18n="wa_details">See full details</a>
+          </article>
+          <article class="price-card">
+            <p class="price-tag" data-i18n="wa_extra_tag">After the 500</p>
+            <p class="price-amount">₹1.50<span data-i18n="wa_each"> each</span></p>
+            <ul>
+              <li data-i18n="wa_extra_a">Extra promo message ₹1.50</li>
+              <li data-i18n="wa_extra_b">Booking, order, or OTP ₹0.30</li>
+              <li data-i18n="wa_extra_c">Meta's own fee is paid on their WhatsApp</li>
+            </ul>
+            <a class="btn btn-ghost btn-sm wa-offer" href="#order" data-service="panel" data-i18n="price_cta">Get quote</a>
+          </article>
+        </div>
+        <p class="price-note" data-i18n="wa_note">Messages leave from the client's WhatsApp number. Meta's India fee is about ₹0.86 for a marketing message and about ₹0.12 for a utility or OTP message, GST extra. A new unverified number can reach about 250 people in 24 hours. That cap is Meta's limit, not free messages.</p>
       </div>
 
       <div class="rate-block">
@@ -488,6 +535,10 @@
           <p data-i18n="faq_5_a">No. Website price is build only. Domain + hosting are paid separately. Instagram ads spend is separate from management fee.</p>
         </details>
         <details class="faq-item">
+          <summary data-i18n="faq_wa_q">What does bulk WhatsApp marketing cost?</summary>
+          <p data-i18n="faq_wa_a">Setup is ₹5,000 once. The panel is ₹3,000/month and includes 500 promo messages. Extra promo is ₹1.50. Booking or OTP updates are ₹0.30. Meta's own fee is separate.</p>
+        </details>
+        <details class="faq-item">
           <summary data-i18n="faq_6_q">What does a business website cost?</summary>
           <p data-i18n="faq_6_a">Starter sites are ₹7,500–₹11,000. Business sites are ₹18,000–₹21,000. Custom work starts at ₹35,000. Domain and hosting are extra.</p>
         </details>
@@ -553,6 +604,7 @@
       <a href="/products/apps.html">Apps</a>
       <a href="/products/instagram.html">Instagram</a>
       <a href="/products/ads.html">Ads</a>
+      <a href="/products/whatsapp.html">WhatsApp</a>
       <a href="/collect.html">Get offers</a>
       <a href="/legal/terms.html">Terms</a>
       <a href="/legal/refund.html">Refund</a>
