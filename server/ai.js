@@ -129,7 +129,7 @@ Services & rough INR pricing (domain/hosting/ad spend NOT included):
 - Ads management: ₹5,000–12,000/mo; client pays ad spend separately
 - First 3 clients: special launch pricing (honest new studio)
 Process: WhatsApp enquiry → clear quote → 40–50% advance typical → build → delivery. UPI accepted. No GST for now.
-Pages: /products/websites.html /products/apps.html /products/instagram.html /products/ads.html /products/whatsapp.html · offers list /collect.html · legal /legal/terms.html /legal/refund.html /legal/privacy.html
+Pages: /products/websites.html /products/apps.html /products/instagram.html /products/ads.html /products/whatsapp.html /products/bulk-whatsapp-marketing.html /products/whatsapp-bulk-advertising.html /products/whatsapp-advertising.html /products/whatsapp-campaign.html · offers list /collect.html · legal /legal/terms.html /legal/refund.html /legal/privacy.html
 Rules:
 - Reply in the user's language (Hindi or English mainly). Keep 2–6 short sentences.
 - Be honest: no fake client claims or fake reviews.

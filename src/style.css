@@ -515,6 +515,14 @@ body.custom-cursor textarea {
   color: var(--muted);
   font-size: 0.9rem;
 }
+.wa-topics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 1rem;
+  margin: 0.8rem 0 0;
+  font-size: 0.92rem;
+}
+.wa-topics a { color: var(--amber); font-weight: 600; text-decoration: none; }
 
 .review-grid {
   display: grid;
@@ -1157,6 +1165,7 @@ body.nav-open { overflow: hidden; }
   padding: 1.15rem 1.2rem;
 }
 .page-card h3, .demo-card h3 { margin: 0 0 0.45rem; font-size: 1.05rem; }
+.page-card a { color: var(--amber); text-decoration: none; font-weight: 700; }
 .page-card p, .demo-card p, .legal-prose p, .legal-prose li {
   margin: 0;
   color: var(--muted);
