@@ -41,6 +41,7 @@ export default defineConfig(({ mode }) => {
           apps: path.resolve(__dirname, 'products/apps.html'),
           instagram: path.resolve(__dirname, 'products/instagram.html'),
           ads: path.resolve(__dirname, 'products/ads.html'),
+          whatsapp: path.resolve(__dirname, 'products/whatsapp.html'),
           terms: path.resolve(__dirname, 'legal/terms.html'),
           refund: path.resolve(__dirname, 'legal/refund.html'),
           privacy: path.resolve(__dirname, 'legal/privacy.html'),
