@@ -11,6 +11,7 @@ import {
   formatDate,
   formatInr,
   messageText,
+  orderConfirmationText,
   monthKey,
   monthLabel,
   paymentsOf,
@@ -683,28 +684,29 @@ async function deliverConfirmation(invoice, force) {
   if (docKind(invoice) === 'demo' && !force) {
     return ` Demo bill number aur earning mein nahi jodi gayi.${mailNote}`;
   }
-  const quote = docKind(invoice) === 'quote';
+  if (docKind(invoice) === 'quote') return mailNote || ' Quotation save ho gayi.';
   const phone = waNumber(invoice.client?.phone);
-  if (!phone || quote) return mailNote || ' Save ho gayi.';
+  if (!phone) return `${mailNote} Client ka WhatsApp likho, tab confirmation jayegi.`.trim();
   try {
     const snap = await api('/api/invoices/wa-status', {});
-    if (snap.status !== 'open') return mailNote || ' Save ho gayi.';
-    const file = await makePdf(invoice);
-    const data = await api('/api/invoices/whatsapp', {
-      id: invoice.id,
-      pdfBase64: await fileToBase64(file),
-      filename: file.name,
-      force: Boolean(force),
-    });
-    if (data.invoice) {
-      loadInv(data.invoice);
-      await loadList();
+    if (snap.status === 'open') {
+      const file = await makePdf(invoice);
+      const data = await api('/api/invoices/whatsapp', {
+        id: invoice.id,
+        pdfBase64: await fileToBase64(file),
+        filename: file.name,
+        force: Boolean(force),
+      });
+      if (data.invoice) {
+        loadInv(data.invoice);
+        await loadList();
+      }
+      if (data.sent) return `${mailNote} WhatsApp confirmation client ko chali gayi.`.trim();
     }
-    if (data.sent) return `${mailNote} WhatsApp se bhi chali gayi.`;
-    return mailNote || ' Save ho gayi.';
   } catch (err) {
-    return `${mailNote} ${err.message || ''}`.trim();
+    console.warn('whatsapp api', err);
   }
+  return `${mailNote} ${openWhatsAppChat(invoice)}`.trim();
 }
 
 async function sendNotice(inv, kind) {
@@ -877,7 +879,10 @@ $('invForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   if (busy) return;
   lock(true);
-  setStatus(wasNew ? 'Bill generate ho rahi hai, mail ja rahi hai…' : 'Bill save ho rahi hai…');
+  const creating = !currentId;
+  setStatus(creating && currentKind === 'invoice'
+    ? 'Bill generate ho rahi hai. Mail aur WhatsApp ja rahe hain…'
+    : (creating ? 'Bill generate ho rahi hai…' : 'Bill save ho rahi hai…'));
   try {
     const { extra } = await saveInvoice();
     setStatus(`Bill save ho gayi.${extra}`);
@@ -888,6 +893,18 @@ $('invForm').addEventListener('submit', async (e) => {
     lock(false);
   }
 });
+
+function openWhatsAppChat(invoice) {
+  const text = orderConfirmationText(invoice, clientLink(invoice));
+  const phone = waNumber(invoice.client?.phone);
+  const url = phone
+    ? `https://wa.me/${phone}?text=${encodeURIComponent(text)}`
+    : `https://wa.me/?text=${encodeURIComponent(text)}`;
+  openExternal(url);
+  return phone
+    ? 'WhatsApp khul gaya. Order confirmation ready hai, Send dabao.'
+    : 'WhatsApp khul gaya. Contact choose karke Send dabao.';
+}
 
 function openExternal(url) {
   const opened = window.open(url, '_blank', 'noopener');
@@ -1225,14 +1242,14 @@ document.fonts?.ready?.then(() => fitSheet($('sheetZoom'), $('sheet')));
 async function refreshWa() {
   const state = $('waState');
   if (!currentUser) {
-    state.textContent = 'WhatsApp API panel Meta approval ke baad message bhejega. Number link karne ki zarurat nahi.';
+    state.textContent = 'Nayi invoice generate hote hi client ko WhatsApp confirmation milti hai.';
     return;
   }
   try {
     const data = await api('/api/invoices/wa-status', {});
     state.textContent = data.status === 'open'
-      ? 'WhatsApp API ready hai. Nayi bill generate hote hi order confirmation client ko chali jayegi.'
-      : (data.error || 'WhatsApp API panel Meta approval ke baad message bhejega. Number link karne ki zarurat nahi.');
+      ? 'WhatsApp connected hai. Nayi invoice generate hote hi confirmation client ko chali jayegi.'
+      : (data.error || 'Generate par order confirmation client ke WhatsApp mein ready khul jayegi.');
   } catch (err) {
     state.textContent = err.message || 'WhatsApp status fail';
   }

@@ -25,7 +25,7 @@ export function waSnapshot() {
     quoteDocument: process.env.WHATSAPP_QUOTE_TEMPLATE_DOCUMENT === '1',
     error: ready
       ? ''
-      : 'WhatsApp API panel Meta approval ke baad chalega. Number link karne ki zarurat nahi.',
+      : 'Generate par order confirmation client ke WhatsApp mein ready khul jayegi. Seedha bhejne ke liye WhatsApp Cloud API invoice desk par connect karo.',
   };
 }
 
@@ -108,7 +108,7 @@ async function sendTemplate({ to, invoice, link, mediaId, filename, templateName
 export async function sendNoticeOnWhatsApp({ phone, text }) {
   if (!waApiReady()) {
     const err = new Error(
-      'WhatsApp API abhi connected nahi hai. BBR Send panel Meta approval ke baad message bhejega. Number link karne ki zarurat nahi.',
+      'WhatsApp Cloud API abhi invoice desk par connected nahi hai.',
     );
     err.code = 'WA_OFFLINE';
     throw err;
@@ -135,7 +135,7 @@ export async function sendNoticeOnWhatsApp({ phone, text }) {
 export async function sendOrderOnWhatsApp({ phone, text, pdfBuffer, filename, invoice, link }) {
   if (!waApiReady()) {
     const err = new Error(
-      'WhatsApp API abhi connected nahi hai. BBR Send panel Meta approval ke baad message bhejega. Number link karne ki zarurat nahi.',
+      'WhatsApp Cloud API abhi invoice desk par connected nahi hai.',
     );
     err.code = 'WA_OFFLINE';
     throw err;
