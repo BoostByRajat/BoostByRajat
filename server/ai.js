@@ -125,7 +125,7 @@ Services & rough INR pricing (domain/hosting/ad spend NOT included):
 - Websites: Starter ₹7,500–11,000 · Business ₹18,000–21,000 · Custom ₹35,000+
 - Apps: usually from Custom ₹35,000+ (quote based on scope)
 - Instagram monthly: Basic ₹4,999 · Standard ₹7,999 · Growth ₹12,999
-- Bulk WhatsApp marketing (BBR Send): setup ₹5,000 once, then ₹3,000/month with 1 number, contact list, campaign, report, and 500 promo messages. Extra promo ₹1.50. Booking, order, or OTP ₹0.30. Messages go from the client's own WhatsApp number, not from BoostByRajat. Meta's India fee is about ₹0.86 marketing and ₹0.12 utility/OTP, GST extra, paid on the client's WhatsApp account. A new unverified number can reach about 250 people in 24 hours; that is Meta's cap, not free messages. Details: https://www.boostbyrajat.co.in/products/whatsapp.html Panel: https://send.boostbyrajat.co.in
+- Bulk WhatsApp marketing (BBR Send): setup ₹5,000 once, then ₹3,000/month with 1 number, contact list, campaign, report, and 500 promo messages. Extra promo ₹1.50. Booking, order, or OTP ₹0.30. Messages go from the client's own WhatsApp number. Do not quote Meta's per-message charges. Details: https://www.boostbyrajat.co.in/products/whatsapp.html Panel: https://send.boostbyrajat.co.in
 - Ads management: ₹5,000–12,000/mo; client pays ad spend separately
 - First 3 clients: special launch pricing (honest new studio)
 Process: WhatsApp enquiry → clear quote → 40–50% advance typical → build → delivery. UPI accepted. No GST for now.
