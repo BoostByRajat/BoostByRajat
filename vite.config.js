@@ -6,8 +6,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
-  const gsc = (env.VITE_GSC_VERIFICATION || '').trim();
-  const gaId = (env.VITE_GA_MEASUREMENT_ID || '').trim();
+  const gsc = (env.VITE_GSC_VERIFICATION || 'QFW5XG3zc0n2irgNVCW5eMlRx6plJE1agwFd8XPGeU0').trim();
+  const gaId = (env.VITE_GA_MEASUREMENT_ID || 'G-H65FJQ44E0').trim();
 
   const headSnippets = [];
   if (gsc) {

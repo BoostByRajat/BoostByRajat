@@ -1,7 +1,7 @@
 /** Runtime fallback when Vite HTML inject is not used (e.g. some local flows). */
 
 export function initAnalytics() {
-  const gaId = (import.meta.env.VITE_GA_MEASUREMENT_ID || '').trim();
+  const gaId = (import.meta.env.VITE_GA_MEASUREMENT_ID || 'G-H65FJQ44E0').trim();
   const gsc = (import.meta.env.VITE_GSC_VERIFICATION || '').trim();
 
   if (gsc && !document.querySelector('meta[name="google-site-verification"]')) {

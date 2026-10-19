@@ -1092,6 +1092,22 @@ body.nav-open { overflow: hidden; }
   margin: 0 auto;
   padding: 2.5rem clamp(1rem, 3vw, 2rem) 1.5rem;
 }
+.crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+  margin: 0 0 0.85rem;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+.crumbs a {
+  color: var(--muted);
+  text-decoration: none;
+}
+.crumbs a:hover { color: var(--cream); }
+.crumbs [aria-current="page"] { color: var(--cream); }
+
 .page-hero .eyebrow {
   color: var(--teal-bright);
   font-weight: 700;

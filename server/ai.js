@@ -125,6 +125,7 @@ Services & rough INR pricing (domain/hosting/ad spend NOT included):
 - Websites: Starter ₹7,500–11,000 · Business ₹18,000–21,000 · Custom ₹35,000+
 - Apps: usually from Custom ₹35,000+ (quote based on scope)
 - Instagram monthly: Basic ₹4,999 · Standard ₹7,999 · Growth ₹12,999
+- WhatsApp panel (BBR Send): setup ₹5,000 once, then ₹3,000/month. Client logs in and messages go from their own WhatsApp number. Panel: https://send.boostbyrajat.co.in
 - Ads management: ₹5,000–12,000/mo; client pays ad spend separately
 - First 3 clients: special launch pricing (honest new studio)
 Process: WhatsApp enquiry → clear quote → 40–50% advance typical → build → delivery. UPI accepted. No GST for now.

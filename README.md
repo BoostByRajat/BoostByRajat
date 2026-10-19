@@ -34,11 +34,13 @@ Invoice desk (phone and laptop): [https://www.boostbyrajat.co.in/invoice.html](h
 Client invoice links use `PUBLIC_SITE_URL` (`https://www.boostbyrajat.co.in`).
 
 ### SEO (already included)
-- Meta title/description/OG tags
-- `public/robots.txt`
-- `public/sitemap.xml` (update URL after deploy)
-- Schema.org `ProfessionalService` JSON-LD
-- Semantic headings + multilingual `lang` attribute
+- Unique titles and descriptions with prices on the home and product pages
+- Absolute Open Graph / Twitter tags
+- `public/robots.txt` (blocks `/api/`; invoice and desk pages stay `noindex`)
+- `public/sitemap.xml` at `https://www.boostbyrajat.co.in/sitemap.xml`
+- Schema.org business, service, breadcrumb and FAQ markup
+- Demo sites (`/demos/`) are `noindex` so sample brands do not compete with BoostByRajat
+- Production redirects `boostbyrajat.co.in` to `https://www.boostbyrajat.co.in`
 
 ### Google Analytics + Search Console
 1. Create a GA4 property → copy Measurement ID (`G-XXXX…`) into `.env` as `VITE_GA_MEASUREMENT_ID` (and Render env).
